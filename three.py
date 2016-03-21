@@ -16,12 +16,12 @@ class Scope(object):
         del self.scopestack[-1]
 
     def newtemp(self):
-        varname = 'tmp'+str(self.varindex).zfill(3)
+        varname = 't'+str(self.varindex).zfill(3)
         self.varindex += 1
         return varname
 
     def newlabel(self):
-        varname = 'lab'+str(self.labindex).zfill(3)
+        varname = 'L'+str(self.labindex).zfill(3)
         self.labindex += 1
         return varname
 
@@ -106,9 +106,20 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
     return three
 
 
-def printthree(three):
-    for row in three:
-        print(''.join([' '*10 if el is None else el.ljust(10) for el in row]))
+def printthree(three,nice=True):
+    if nice:
+        for op,arg1,arg2,res in three:
+            if op=='assign' or op=='load':
+                print("%s\t:=\t%s" % (res,arg1))
+            elif op in ['label','jump']:
+                print("%s\t\t%s" % (op,res))
+            elif op=='jumpfalse':
+                print("%s\t%s\t%s" % ('jumpfalse',arg1,res))
+            else:
+                print("%s\t:=\t%s\t%s\t%s" % (res,arg1,op,arg2))
+    else:
+        for row in three:
+            print(''.join([' '*10 if el is None else el.ljust(10) for el in row]))
 
 if __name__ == '__main__':
     import argparse
