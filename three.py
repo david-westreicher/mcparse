@@ -74,6 +74,7 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
 
     if type(ast) == BinOp:
         if ast.operation == '=' and type(ast.lhs) == Variable:
+            # this is an assignment posing as a binop
             tmpvarrhs = scope.newtemp()
             asttothree(ast.rhs, three, scope, tmpvarrhs)
             three.append(['assign', tmpvarrhs, None, ast.lhs.name])
@@ -109,7 +110,7 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
 def printthree(three,nice=True):
     if nice:
         for op,arg1,arg2,res in three:
-            if op=='assign' or op=='load':
+            if op in ['assign','load']:
                 print("%s\t:=\t%s" % (res,arg1))
             elif op in ['label','jump']:
                 print("%s\t\t%s" % (op,res))
