@@ -1,7 +1,7 @@
 from three import printthree
 
 
-def threetobbs(threes):
+def threetobbs(threes, verbose=0):
     # find leaders by instruction line
     leaders = set([0])
     for line, three in enumerate(threes):
@@ -20,6 +20,10 @@ def threetobbs(threes):
             currentblock = []
         currentblock.append(three)
     bbs.append(currentblock)
+
+    if verbose>0:
+        print('\n' + ' Basic Blocks '.center(40,'#'))
+        printbbs(bbs)
     return bbs
 
 
@@ -35,6 +39,10 @@ if __name__ == '__main__':
     from three import asttothree
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to translate to basic blocks")
+    parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
-    bbs = threetobbs(asttothree(parsefile(args.filename)))
-    printbbs(bbs)
+    bbs = threetobbs(
+            asttothree(
+                parsefile(args.filename, verbose=args.verbose-1),
+                verbose=args.verbose),
+            verbose=1)
