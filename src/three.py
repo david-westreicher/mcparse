@@ -35,10 +35,17 @@ class Scope(object):
         return False
 
 
-def asttothree(ast, three=[], scope=Scope(), result=None):
+def asttothree(ast, three = None, scope=None, result=None, verbose=0):
+    scope = Scope() if scope is None else scope
+    three = [] if three is None else three
+
     if type(ast) == IfStmt:
+        if ast.if_stmt is None and ast.else_stmt is None:
+            return []
+
         tmpvar = scope.newtemp()
         endiflabel = scope.newlabel()
+        # TODO could optimize further if if_stmt is None (-> empty if compound)
         if ast.else_stmt is None:
             asttothree(ast.expression, three, scope, tmpvar)
             three.append(['jumpfalse', tmpvar, None, endiflabel])
@@ -75,7 +82,7 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
             asttothree(ast.expression, three, scope, tmpvar)
             three.append(['assign', tmpvar, None, ast.variable])
         else:
-            three.append(['load', 'default-'+ast.type, None, ast.variable])
+            three.append(['assign', 'default-'+ast.type, None, ast.variable])
 
     if type(ast) == CompStmt:
         scope.open()
@@ -100,14 +107,18 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
             three.append([ast.operation, tmpvarlhs, tmpvarrhs, result])
 
     if type(ast) == UnaOp:
+        if result is None:
+            warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
+            warnings.warn(warnmsg)
         tmpvar = scope.newtemp()
         asttothree(ast.expression, three, scope, tmpvar)
         three.append([ast.operation, tmpvar, None, result])
 
     if type(ast) == Literal:
         if result is None:
-            raise Exception('No result set')
-        three.append(['load', str(ast.val), None, result])
+            warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
+            warnings.warn(warnmsg)
+        three.append(['assign', ast.val, None, result])
 
     if type(ast) == Variable:
         if result is None:
@@ -115,28 +126,32 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
         if ast.name not in scope:
             raise Exception('Variable "%s" not in scope (probably not declared before)' % ast.name)
         three.append(['assign', ast.name, None, result])
+
+    if verbose>0:
+        print('\n' + ' 3-address-code '.center(40,'#'))
+        printthree(three)
     return three
 
 
-def printthree(three, nice=True):
+def printthree(three, nice=False):
     if nice:
         for op, arg1, arg2, res in three:
-            if op in ['assign', 'load']:
+            if op in ['assign']:
                 print("%s\t:=\t%s" % (res, arg1))
             elif op in ['label', 'jump']:
                 print("%s\t\t%s" % (op, res))
             elif op == 'jumpfalse':
                 print("%s\t%s\t%s" % ('jumpfalse', arg1, res))
-            else:
+            elif op in ['+','-','*','/','+']:
                 print("%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2))
     else:
         for row in three:
-            print(''.join([' '*10 if el is None else el.ljust(10) for el in row]))
+            print(''.join([' '*10 if el is None else str(el).ljust(10) for el in row]))
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to translate to three-address code")
+    parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
-    three = asttothree(parsefile(args.filename))
-    printthree(three)
+    three = asttothree(parsefile(args.filename, verbose=args.verbose), verbose=1)
