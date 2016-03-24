@@ -11,9 +11,22 @@ pip install -r requirements.txt
 ```
 
 # run
+Parser: source code to AST
 
 ```
 python src/parser.py examples/test01.mc
+```
+
+Three: AST to 3-address-code
+
+```
+python src/three.py examples/test01.mc
+```
+
+Basic Blocks: 3-address-code to basic blocks
+
+```
+python src/bb.py examples/test01.mc
 ```
 
 # unittests
