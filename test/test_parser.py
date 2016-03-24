@@ -68,11 +68,12 @@ class TestGrammar(unittest.TestCase):
         self.checkstmt('-4.2', 'unary_expr', True)
 
         self.checkstmt('-4.2', 'paren_expr', False)
-        self.checkstmt('(1+7)', 'paren_expr', True)
+        self.checkstmt('( 1+7 )', 'paren_expr', True)
 
     def test_statements(self):
         self.checkstmt('test', 'expr_stmt', False)
         self.checkstmt('1;', 'expr_stmt', True)
+        self.checkstmt('2.0*x ;', 'expr_stmt', True)
 
         self.checkstmt('test', 'compound_stmt', False)
         self.checkstmt('{}', 'compound_stmt', True)
@@ -82,6 +83,7 @@ class TestGrammar(unittest.TestCase):
         self.checkstmt('if(1) {}', 'if_stmt', True)
         self.checkstmt('if (1) {} else 5;', 'if_stmt', True)
         self.checkstmt('int test;', 'decl_stmt', True)
+        self.checkstmt('int test = 2 ;', 'decl_stmt', True)
 
     def test_complex_statements(self):
         self.checkstmt(
