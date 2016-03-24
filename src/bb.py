@@ -1,17 +1,20 @@
+from three import printthree
+
+
 def threetobbs(threes):
     # find leaders by instruction line
     leaders = set([0])
-    for line,three in enumerate(threes):
+    for line, three in enumerate(threes):
         op = three[0]
         if op == 'label':
             leaders.add(line)
-        if op in ['jump','jumpfalse']:
+        if op in ['jump', 'jumpfalse']:
             leaders.add(line+1)
 
     # generate basic blocks for every leader
     bbs = []
     currentblock = []
-    for line,three in enumerate(threes):
+    for line, three in enumerate(threes):
         if line in leaders and len(currentblock) > 0:
             bbs.append(currentblock)
             currentblock = []
@@ -20,11 +23,10 @@ def threetobbs(threes):
     return bbs
 
 
-from three import printthree
-def printbbs(bbs,nice=True):
-    for i,bb in enumerate(bbs):
+def printbbs(bbs, nice=True):
+    for i, bb in enumerate(bbs):
         print('Basic Block #%i' % i)
-        printthree(bb,nice)
+        printthree(bb, nice)
         print('\n')
 
 if __name__ == '__main__':
