@@ -8,15 +8,15 @@ mcgrammar = Grammar(
     """
     statement        = if_stmt / decl_stmt / compound_stmt / expr_stmt
     if_stmt          = "if" _ paren_expr _ statement (_ "else" _ statement)?
-    decl_stmt        = type _ identifier (_ "=" _ expression)? ";"
+    decl_stmt        = type _ identifier (_ "=" _ expression)? _ ";"
     compound_stmt    = "{" _ (statement _)* "}"
-    expr_stmt        = expression ";"
+    expr_stmt        = expression _ ";"
     type             = "int" / "float"
     expression       = binary_operation / single_expr
     binary_operation = single_expr _ bin_op _ expression
     single_expr      = paren_expr / unary_expr / literal / identifier
     bin_op           = "+" / "-" / "*" / "/" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
-    paren_expr       = "(" expression ")"
+    paren_expr       = "(" _ expression _ ")"
     unary_expr       = unop _ expression
     unop             = "-" / "!"
     literal          = float_lit / int_lit
@@ -77,7 +77,7 @@ class ASTFormatter(NodeVisitor):
         return node.text
 
     def visit_paren_expr(self, node, childs):
-        return childs[1]
+        return childs[2]
 
     def visit_unary_expr(self, node, childs):
         return UnaOp(*(childs[i] for i in [0, 2]))
