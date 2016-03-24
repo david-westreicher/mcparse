@@ -9,7 +9,7 @@ def threetobbs(threes, verbose=0):
         if op == 'label':
             leaders.add(line)
         if op in ['jump', 'jumpfalse']:
-            leaders.add(line+1)
+            leaders.add(line + 1)
 
     # generate basic blocks for every leader
     bbs = []
@@ -21,8 +21,8 @@ def threetobbs(threes, verbose=0):
         currentblock.append(three)
     bbs.append(currentblock)
 
-    if verbose>0:
-        print('\n' + ' Basic Blocks '.center(40,'#'))
+    if verbose > 0:
+        print('\n' + ' Basic Blocks '.center(40, '#'))
         printbbs(bbs)
     return bbs
 
@@ -42,7 +42,9 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
     bbs = threetobbs(
-            asttothree(
-                parsefile(args.filename, verbose=args.verbose-1),
-                verbose=args.verbose),
-            verbose=1)
+        asttothree(
+            parsefile(
+                args.filename,
+                verbose=args.verbose - 1),
+            verbose=args.verbose),
+        verbose=1)

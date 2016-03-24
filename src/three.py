@@ -4,6 +4,7 @@ import warnings
 
 
 class Scope(object):
+
     def __init__(self):
         self.varindex = 0
         self.labindex = 0
@@ -16,12 +17,12 @@ class Scope(object):
         del self.scopestack[-1]
 
     def newtemp(self):
-        varname = 't'+str(self.varindex).zfill(3)
+        varname = 't' + str(self.varindex).zfill(3)
         self.varindex += 1
         return varname
 
     def newlabel(self):
-        varname = 'L'+str(self.labindex).zfill(3)
+        varname = 'L' + str(self.labindex).zfill(3)
         self.labindex += 1
         return varname
 
@@ -35,7 +36,7 @@ class Scope(object):
         return False
 
 
-def asttothree(ast, three = None, scope=None, result=None, verbose=0):
+def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     scope = Scope() if scope is None else scope
     three = [] if three is None else three
 
@@ -82,7 +83,7 @@ def asttothree(ast, three = None, scope=None, result=None, verbose=0):
             asttothree(ast.expression, three, scope, tmpvar)
             three.append(['assign', tmpvar, None, ast.variable])
         else:
-            three.append(['assign', 'default-'+ast.type, None, ast.variable])
+            three.append(['assign', 'default-' + ast.type, None, ast.variable])
 
     if type(ast) == CompStmt:
         scope.open()
@@ -127,8 +128,8 @@ def asttothree(ast, three = None, scope=None, result=None, verbose=0):
             raise Exception('Variable "%s" not in scope (probably not declared before)' % ast.name)
         three.append(['assign', ast.name, None, result])
 
-    if verbose>0:
-        print('\n' + ' 3-address-code '.center(40,'#'))
+    if verbose > 0:
+        print('\n' + ' 3-address-code '.center(40, '#'))
         printthree(three)
     return three
 
@@ -142,11 +143,11 @@ def printthree(three, nice=False):
                 print("%s\t\t%s" % (op, res))
             elif op == 'jumpfalse':
                 print("%s\t%s\t%s" % ('jumpfalse', arg1, res))
-            elif op in ['+','-','*','/','+']:
+            elif op in ['+', '-', '*', '/', '+']:
                 print("%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2))
     else:
         for row in three:
-            print(''.join([' '*10 if el is None else str(el).ljust(10) for el in row]))
+            print(''.join([' ' * 10 if el is None else str(el).ljust(10) for el in row]))
 
 if __name__ == '__main__':
     import argparse

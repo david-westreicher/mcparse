@@ -119,29 +119,29 @@ def prettyast(ast, level=0, res=None):
         for el in ast:
             res = prettyast(el, level, res)
     elif isinstance(ast, tuple):
-        res += '\t'*level+type(ast).__name__+'\n'
+        res += '\t' * level + type(ast).__name__ + '\n'
         for el in ast:
-            res = prettyast(el, level+1, res)
+            res = prettyast(el, level + 1, res)
     else:
-        res += '\t'*level+str(ast)+'\n'
+        res += '\t' * level + str(ast) + '\n'
     return res
 
 
 def parse(stringcode, verbose=0):
     parsetree = mcgrammar.parse(stringcode)
     if verbose > 1:
-        print('\n' + ' Parse Tree '.center(40,'#'))
+        print('\n' + ' Parse Tree '.center(40, '#'))
         print(parsetree)
     ast = ASTFormatter().visit(parsetree)
     if verbose > 0:
-        print('\n' + ' AST '.center(40,'#'))
+        print('\n' + ' AST '.center(40, '#'))
         print(prettyast(ast))
     return ast
 
 
 def parsefile(fname, verbose=0):
     with open(fname, 'r') as mcfile:
-        print('\n' + ' Source code '.center(40,'#'))
+        print('\n' + ' Source code '.center(40, '#'))
         stringcode = mcfile.read()[:-1]
         print(stringcode)
         return parse(stringcode, verbose)
@@ -152,4 +152,4 @@ if __name__ == '__main__':
     parser.add_argument("filename", help="The *.mc file to parse")
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
-    parsefile(args.filename, verbose=args.verbose+1)
+    parsefile(args.filename, verbose=args.verbose + 1)
