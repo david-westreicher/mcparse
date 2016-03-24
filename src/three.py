@@ -38,22 +38,33 @@ class Scope(object):
 def asttothree(ast, three=[], scope=Scope(), result=None):
     if type(ast) == IfStmt:
         tmpvar = scope.newtemp()
-        label1 = scope.newlabel()
-        label2 = scope.newlabel()
+        endiflabel = scope.newlabel()
+        if ast.else_stmt is None:
+            asttothree(ast.expression, three, scope, tmpvar)
+            three.append(['jumpfalse', tmpvar, None, endiflabel])
 
-        asttothree(ast.expression, three, scope, tmpvar)
-        three.append(['jumpfalse', tmpvar, None, label1])
+            scope.open()
+            asttothree(ast.if_stmt, three, scope)
+            scope.close()
 
-        scope.open()
-        asttothree(ast.if_stmt, three, scope)
-        three.append(['jump', None, None, label2])
-        three.append(['label', None, None, label1])
-        scope.close()
+            three.append(['label', None, None, endiflabel])
+        else:
+            elselabel = scope.newlabel()
 
-        scope.open()
-        asttothree(ast.else_stmt, three, scope)
-        three.append(['label', None, None, label2])
-        scope.close()
+            asttothree(ast.expression, three, scope, tmpvar)
+            three.append(['jumpfalse', tmpvar, None, elselabel])
+
+            scope.open()
+            asttothree(ast.if_stmt, three, scope)
+            three.append(['jump', None, None, endiflabel])
+            scope.close()
+
+            three.append(['label', None, None, elselabel])
+            scope.open()
+            asttothree(ast.else_stmt, three, scope)
+            scope.close()
+
+            three.append(['label', None, None, endiflabel])
 
     if type(ast) == DeclStmt:
         if ast.variable in scope:
@@ -102,7 +113,7 @@ def asttothree(ast, three=[], scope=Scope(), result=None):
         if result is None:
             raise Exception('No result set')
         if ast.name not in scope:
-            raise Exception('Variable "%s" not in scope' % ast.name)
+            raise Exception('Variable "%s" not in scope (probably not declared before)' % ast.name)
         three.append(['assign', ast.name, None, result])
     return three
 
