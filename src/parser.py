@@ -51,6 +51,8 @@ class ASTFormatter(NodeVisitor):
 
     def visit_compound_stmt(self, node, childs):
         stmts = childs[2]
+        if stmts is None:
+            return None
         if not isinstance(stmts, list):
             stmts = [stmts]
         return CompStmt(stmts)
@@ -87,10 +89,10 @@ class ASTFormatter(NodeVisitor):
         return childs[0]
 
     def visit_int_lit(self, node, childs):
-        return Literal(node.expr_name, int(node.text))
+        return Literal('int', int(node.text))
 
     def visit_float_lit(self, node, childs):
-        return Literal(node.expr_name, float(node.text))
+        return Literal('float', float(node.text))
 
     def visit_identifier(self, node, childs):
         return Variable(node.text)
@@ -103,7 +105,7 @@ class ASTFormatter(NodeVisitor):
             return None
         res = [x for x in childs if x is not None]
         if len(res) == 0:
-            raise Exception
+            return None
         if len(res) == 1:
             return res[0]
         if len(res) > 1:
@@ -125,22 +127,29 @@ def prettyast(ast, level=0, res=None):
     return res
 
 
-def parse(stringcode):
-    print(stringcode)
+def parse(stringcode, verbose=0):
     parsetree = mcgrammar.parse(stringcode)
-    # print(parsetree)
+    if verbose > 1:
+        print('\n' + ' Parse Tree '.center(40,'#'))
+        print(parsetree)
     ast = ASTFormatter().visit(parsetree)
-    # print(prettyast(ast))
+    if verbose > 0:
+        print('\n' + ' AST '.center(40,'#'))
+        print(prettyast(ast))
     return ast
 
 
-def parsefile(fname):
+def parsefile(fname, verbose=0):
     with open(fname, 'r') as mcfile:
-        return parse(mcfile.read()[:-1])
+        print('\n' + ' Source code '.center(40,'#'))
+        stringcode = mcfile.read()[:-1]
+        print(stringcode)
+        return parse(stringcode, verbose)
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to parse")
+    parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
-    print(prettyast(parsefile(args.filename)))
+    parsefile(args.filename, verbose=args.verbose+1)
