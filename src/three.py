@@ -21,12 +21,12 @@ class Scope(object):
         del self.scopestack[-1]
 
     def newtemp(self):
-        varname = 't' + str(self.varindex).zfill(3)
+        varname = '.t' + str(self.varindex)
         self.varindex += 1
         return varname
 
     def newlabel(self):
-        varname = 'L' + str(self.labindex).zfill(3)
+        varname = 'L' + str(self.labindex)
         self.labindex += 1
         return varname
 
@@ -41,6 +41,37 @@ class Scope(object):
 
 
 def asttothree(ast, three=None, scope=None, result=None, verbose=0):
+    ''' converts an AST into a list of 3-addr.-codes
+
+        ['jump'     , None, None, result]
+            Jump to label 'result'
+            ['jump', None, None, 'L3']      ->  jump        L3
+
+        ['jumpfalse', arg1, None, result]
+            Jump to label 'result' if value/register 'arg1' equals to false
+            ['jumpfalse', 1, None, 'L2']    ->  jumpfalse   1   L2
+
+        ['label'    , None, None, result]
+            A label with the name 'result'
+            ['label', None, None, 'L1']     ->  label       L1
+
+        ['assign'   , arg1, None, result]
+            Assigns the value/register 'arg1' to the register 'result'
+            ['assign', 'y', None, 'x']      ->  x   :=      y
+
+        [binop      , arg1, arg2, result]
+            binop can be any of ['+', '-', '*', '/', '==', '!=', '<=', '>=', '<', '>']
+            Assigns the result of the operation 'binop' (of the value/register 'arg1'
+            and the value/register 'arg2') to the register 'result'
+            ['+', 4, t1, 'x']               ->  x   :=      4   +   t1
+
+        [unop       , arg1, None, result]
+            unop can be any of ['-', '!']
+            Assigns the result of the operation 'unnop' (of the value/register 'arg1')
+            to the register 'result'
+            ['-', 4, None, 'x']             ->  x   :=      -       4
+    '''
+
     scope = Scope() if scope is None else scope
     three = [] if three is None else three
 
@@ -142,7 +173,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     return three
 
 
-def printthree(three, nice=False):
+def printthree(three, nice=True):
     if nice:
         for op, arg1, arg2, res in three:
             if op in ['assign']:
@@ -151,8 +182,12 @@ def printthree(three, nice=False):
                 print("%s\t\t%s" % (op, res))
             elif op == 'jumpfalse':
                 print("%s\t%s\t%s" % ('jumpfalse', arg1, res))
-            elif op in ['+', '-', '*', '/', '+']:
+            elif arg2 is not None:
+                # binary operation
                 print("%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2))
+            else:
+                # unary operation
+                print("%s\t:=\t%s\t%s" % (res, op, arg1))
     else:
         for row in three:
             print(''.join([' ' * 10 if el is None else str(el).ljust(10) for el in row]))

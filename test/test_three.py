@@ -12,6 +12,15 @@ class TestThree(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(three.asttothree(None), [])
 
+    def test_decl_default(self):
+        three = codetothree('int x;')
+        self.assertEqual(len(three), 1)
+        op, arg1, arg2, res = three[0]
+        self.assertEqual(op, 'assign')
+        self.assertEqual(arg1, 'default-int')
+        self.assertEqual(arg2, None)
+        self.assertEqual(res, 'x')
+
 
 class TestScope(unittest.TestCase):
 
