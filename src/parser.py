@@ -112,18 +112,19 @@ class ASTFormatter(NodeVisitor):
             return res
 
 
-def prettyast(ast, level=0, res=None):
-    if res is None:
-        res = ''
+def prettyast(ast, level=0, tostr=True):
+    res = []
     if isinstance(ast, list):
         for el in ast:
-            res = prettyast(el, level, res)
+            res.extend(prettyast(el, level, tostr=False))
     elif isinstance(ast, tuple):
-        res += '\t' * level + type(ast).__name__ + '\n'
+        res.append('\t' * level + type(ast).__name__)
         for el in ast:
-            res = prettyast(el, level + 1, res)
+            res.extend(prettyast(el, level + 1, tostr=False))
     else:
-        res += '\t' * level + str(ast) + '\n'
+        res.append('\t' * level + str(ast))
+    if tostr:
+        return '\n'.join(res)
     return res
 
 
