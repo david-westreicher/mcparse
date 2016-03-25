@@ -3,6 +3,10 @@ from parser import IfStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
 import warnings
 
 
+class ScopeException(Exception):
+    pass
+
+
 class Scope(object):
 
     def __init__(self):
@@ -42,6 +46,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
     if type(ast) == IfStmt:
         if ast.if_stmt is None and ast.else_stmt is None:
+            # TODO possible bug: the expression is actually an assignment :(
             return []
 
         tmpvar = scope.newtemp()
@@ -76,14 +81,14 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
     if type(ast) == DeclStmt:
         if ast.variable in scope:
-            raise Exception('Variable "%s" is already declared' % ast.variable)
-        scope.add(ast.variable)
+            raise ScopeException('Variable "%s" is already declared' % ast.variable)
         if ast.expression is not None:
             tmpvar = scope.newtemp()
             asttothree(ast.expression, three, scope, tmpvar)
             three.append(['assign', tmpvar, None, ast.variable])
         else:
             three.append(['assign', 'default-' + ast.type, None, ast.variable])
+        scope.add(ast.variable)
 
     if type(ast) == CompStmt:
         scope.open()
@@ -95,8 +100,11 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         if ast.operation == '=' and type(ast.lhs) == Variable:
             # this is an assignment posing as a binop
             tmpvarrhs = scope.newtemp()
+            varname = ast.lhs.name
+            if varname not in scope:
+                raise ScopeException('Variable "%s" not in scope (probably not declared before)' % varname)
             asttothree(ast.rhs, three, scope, tmpvarrhs)
-            three.append(['assign', tmpvarrhs, None, ast.lhs.name])
+            three.append(['assign', tmpvarrhs, None, varname])
         else:
             if result is None:
                 warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
@@ -123,9 +131,9 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
     if type(ast) == Variable:
         if result is None:
-            raise Exception('No result set')
+            raise Exception('no result set')
         if ast.name not in scope:
-            raise Exception('Variable "%s" not in scope (probably not declared before)' % ast.name)
+            raise ScopeException('Variable "%s" not in scope (probably not declared before)' % ast.name)
         three.append(['assign', ast.name, None, result])
 
     if verbose > 0:
