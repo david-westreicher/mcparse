@@ -38,33 +38,33 @@ DESCRIPTION
 EXAMPLE                         ->  SIMPLE NOTATION
 ```
 
-```
+```python
 ['jump'     , None, None, result]
 # Jump to label 'result'
 ['jump', None, None, 'L3']      ->  jump        L3
 ```
-```
+```python
 ['jumpfalse', arg1, None, result]
 # Jump to label 'result' if value/register 'arg1' equals to false
 ['jumpfalse', 1, None, 'L2']    ->  jumpfalse   1   L2
 ```
-```
+```python
 ['label'    , None, None, result]
 # A label with the name 'result'
 ['label', None, None, 'L1']     ->  label       L1
 ```
-```
+```python
 ['assign'   , arg1, None, result]
 # Assigns the value/register 'arg1' to the register 'result'
 ['assign', 'y', None, 'x']      ->  x   :=      y
 ```
-```
+```python
 [binop      , arg1, arg2, result]
 # binop can be any of ['+', '-', '*', '/', '==', '!=', '<=', '>=', '<', '>']
 # Assigns the result of the operation 'binop' (of the value/register 'arg1' and the value/register 'arg2') to the register 'result'
 ['+', 4, t1, 'x']               ->  x   :=      4   +   t1
 ```
-```
+```python
 [unop       , arg1, None, result]
 # unop can be any of ['-', '!']
 # Assigns the result of the operation 'unnop' (of the value/register 'arg1') to the register 'result'
