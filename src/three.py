@@ -112,6 +112,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
     if type(ast) == DeclStmt:
         if ast.variable in scope:
+            # TODO double declaration should be valid if in new scope
             raise ScopeException('Variable "%s" is already declared' % ast.variable)
         if ast.expression is not None:
             tmpvar = scope.newtemp()
