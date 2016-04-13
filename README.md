@@ -146,6 +146,7 @@ All the scripts also accept some verbose flags for debugging: `-v / -vv / -vvv`
   ```
   $ python src/cfg.py examples/test01.mc graph.dot [--lvn]
   ```
+
 ## Example
 ```
 > python src/cfg.py examples/test01.mc graph.dot --lvn
