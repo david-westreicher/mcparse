@@ -111,7 +111,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             three.append(['label', None, None, endiflabel])
 
     if type(ast) == DeclStmt:
-        if ast.variable in scope:
+        if ast.variable in scope.scopestack[-1]:
             # TODO double declaration should be valid if in new scope
             raise ScopeException('Variable "%s" is already declared' % ast.variable)
         if ast.expression is not None:
@@ -174,21 +174,24 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     return three
 
 
+def prettythreestr(op, arg1, arg2, res):
+    if op in ['assign']:
+        return "%s\t:=\t%s" % (res, arg1)
+    elif op in ['label', 'jump']:
+        return "%s\t\t%s" % (op, res)
+    elif op == 'jumpfalse':
+        return "%s\t%s\t%s" % ('jumpfalse', arg1, res)
+    elif arg2 is not None:
+        # binary operation
+        return "%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2)
+    else:
+        # unary operation
+        return "%s\t:=\t%s\t%s" % (res, op, arg1)
+
 def printthree(three, nice=True):
     if nice:
         for op, arg1, arg2, res in three:
-            if op in ['assign']:
-                print("%s\t:=\t%s" % (res, arg1))
-            elif op in ['label', 'jump']:
-                print("%s\t\t%s" % (op, res))
-            elif op == 'jumpfalse':
-                print("%s\t%s\t%s" % ('jumpfalse', arg1, res))
-            elif arg2 is not None:
-                # binary operation
-                print("%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2))
-            else:
-                # unary operation
-                print("%s\t:=\t%s\t%s" % (res, op, arg1))
+            print(prettythreestr(op,arg1,arg2,res))
     else:
         for row in three:
             print(''.join([' ' * 10 if el is None else str(el).ljust(10) for el in row]))
