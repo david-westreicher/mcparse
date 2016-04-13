@@ -22,14 +22,12 @@ def localvaluenumbering(basicblock):
                 e = (op,valueargs[0],valueargs[1])
             else:
                 e = (op,valueargs[1],valueargs[0])
-
-        if op=='assign':
+        elif op=='assign':
             e = str(arg1)
-            values[str(res)] = valueargs[0]
-        else:
-            values[str(res)] = str(res)
+
         if e not in values:
-            values[e] = str(res)
+            values[res] = res
+            values[e] = res
             if op!='assign':
                 code[1] = valueargs[0]
                 code[2] = valueargs[1]
@@ -37,13 +35,11 @@ def localvaluenumbering(basicblock):
             # for el in values:
                 # print(el,values[el])
             # print('replace: [%s,%s,%s,%s] with %s' % (op,arg1,arg2,res,values[e]))
-            if op=='assign':
-                code[1] = values[e]
-            else:
+            values[res] = values[e]
+            if op != 'assign':
                 code[0] = 'assign'
-                code[1] = values[e]
                 code[2] = None
-                values[str(res)] = values[e]
+            code[1] = values[e]
 
 def removeunusedlines(bb):
     usedtemps = []
