@@ -146,6 +146,10 @@ All the scripts also accept some verbose flags for debugging: `-v / -vv / -vvv`
   ```
   $ python src/cfg.py examples/test01.mc graph.dot [--lvn]
   ```
+* Dataflow (Live Variable Analysis)
+  ```
+  $ python src/dataflow.py examples/test23.mc
+  ```
 
 ## Example
 ```
