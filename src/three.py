@@ -1,5 +1,5 @@
 from parser import parsefile, prettyast
-from parser import IfStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
+from parser import IfStmt, WhileStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
 import warnings
 
 
@@ -109,6 +109,22 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             scope.close()
 
             three.append(['label', None, None, endiflabel])
+
+    if type(ast) == WhileStmt:
+        startwhilelabel = scope.newlabel()
+        three.append(['label', None, None, startwhilelabel])
+
+        tmpvar = scope.newtemp()
+        endwhilelabel = scope.newlabel()
+        asttothree(ast.expression, three, scope, tmpvar)
+        three.append(['jumpfalse', tmpvar, None, endwhilelabel])
+
+        scope.open()
+        asttothree(ast.stmt, three, scope)
+        three.append(['jump', None, None, startwhilelabel])
+        scope.close()
+
+        three.append(['label', None, None, endwhilelabel])
 
     if type(ast) == DeclStmt:
         if ast.variable in scope.scopestack[-1]:
