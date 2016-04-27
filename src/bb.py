@@ -29,7 +29,7 @@ def threetobbs(threes, verbose=0):
 
 def printbbs(bbs, nice=True):
     for i, bb in enumerate(bbs):
-        print('Basic Block #%i' % i)
+        print((' Basic Block %i ' % i).center(40,'-'))
         printthree(bb, nice)
         print('\n')
 
