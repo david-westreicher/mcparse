@@ -96,4 +96,4 @@ if __name__ == '__main__':
         verbose=args.verbose - 1)
     bbs = lvn(bbs, verbose=1)
     cfg = bbstocfg(bbs, verbose=1)
-    liveness(bbs, cfg, verbose=args.verbose+1)
+    liveness(bbs, cfg, verbose=args.verbose + 1)

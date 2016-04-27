@@ -237,7 +237,7 @@ class TestLiveness(unittest.TestCase):
         self.assertEqual(outb[0], inb[1])
         self.assertEqual(outb[1], set())
         self.assertEqual(inb[0], set(['c']))
-        self.assertEqual(inb[1], set(['a','b','c']))
+        self.assertEqual(inb[1], set(['a', 'b', 'c']))
 
     def test_wikiexample(self):
         # example from https://en.wikipedia.org/wiki/Live_variable_analysis

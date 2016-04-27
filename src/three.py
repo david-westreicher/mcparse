@@ -204,10 +204,11 @@ def prettythreestr(op, arg1, arg2, res):
         # unary operation
         return "%s\t:=\t%s\t%s" % (res, op, arg1)
 
+
 def printthree(three, nice=True):
     if nice:
         for op, arg1, arg2, res in three:
-            print(prettythreestr(op,arg1,arg2,res))
+            print(prettythreestr(op, arg1, arg2, res))
     else:
         for row in three:
             print(''.join([' ' * 10 if el is None else str(el).ljust(10) for el in row]))

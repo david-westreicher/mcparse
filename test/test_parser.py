@@ -87,7 +87,7 @@ class TestGrammar(unittest.TestCase):
 
     def test_complex_statements(self):
         self.checkstmt(
-        """{
+            """{
             int x;
             if(1 == 2) {
                 5+4*8.0;
@@ -100,7 +100,7 @@ class TestGrammar(unittest.TestCase):
             2.9;
         }""", 'statement', True)
         self.checkstmt(
-        """{
+            """{
             int x=1;
             float y = 3.0;
             if(x > 0) {
@@ -110,17 +110,18 @@ class TestGrammar(unittest.TestCase):
             }
         }""", 'statement', True)
 
+
 class TestAST(unittest.TestCase):
 
     def checkComp(self, ast, *types):
-        self.assertEqual(type(ast),parser.CompStmt)
+        self.assertEqual(type(ast), parser.CompStmt)
         for stmt, t in zip(ast.stmts, types):
-            self.assertEqual(type(stmt),t)
+            self.assertEqual(type(stmt), t)
 
     def checkLiteral(self, ast, typ, val):
-        self.assertEqual(type(ast),parser.Literal)
-        self.assertEqual(ast.type,typ)
-        self.assertEqual(ast.val,val)
+        self.assertEqual(type(ast), parser.Literal)
+        self.assertEqual(ast.type, typ)
+        self.assertEqual(ast.val, val)
 
     def test_ifelse(self):
         ast = parser.parse(
@@ -129,10 +130,10 @@ class TestAST(unittest.TestCase):
             } else {
                 int x = 3;
             }""")
-        self.assertEqual(type(ast),parser.IfStmt)
-        self.assertEqual(type(ast.expression),parser.Literal)
-        self.assertEqual(ast.expression.type,'int')
-        self.assertEqual(ast.expression.val,1)
+        self.assertEqual(type(ast), parser.IfStmt)
+        self.assertEqual(type(ast.expression), parser.Literal)
+        self.assertEqual(ast.expression.type, 'int')
+        self.assertEqual(ast.expression.val, 1)
         self.checkComp(ast.if_stmt, parser.DeclStmt)
         self.checkComp(ast.else_stmt, parser.DeclStmt)
 
@@ -141,27 +142,27 @@ class TestAST(unittest.TestCase):
             """if(1) {
                 int x = 2;
             }""")
-        self.assertEqual(type(ast),parser.IfStmt)
-        self.assertEqual(type(ast.expression),parser.Literal)
-        self.assertEqual(ast.expression.type,'int')
-        self.assertEqual(ast.expression.val,1)
+        self.assertEqual(type(ast), parser.IfStmt)
+        self.assertEqual(type(ast.expression), parser.Literal)
+        self.assertEqual(ast.expression.type, 'int')
+        self.assertEqual(ast.expression.val, 1)
         self.checkComp(ast.if_stmt, parser.DeclStmt)
-        self.assertEqual(ast.else_stmt,None)
+        self.assertEqual(ast.else_stmt, None)
 
     def test_decl(self):
         ast = parser.parse('int x;')
-        self.assertEqual(type(ast),parser.DeclStmt)
-        self.assertEqual(ast.type,'int')
-        self.assertEqual(ast.variable,'x')
-        self.assertEqual(ast.expression,None)
+        self.assertEqual(type(ast), parser.DeclStmt)
+        self.assertEqual(ast.type, 'int')
+        self.assertEqual(ast.variable, 'x')
+        self.assertEqual(ast.expression, None)
 
         ast = parser.parse('float y = 1.0;')
-        self.assertEqual(type(ast),parser.DeclStmt)
-        self.assertEqual(ast.type,'float')
-        self.assertEqual(ast.variable,'y')
-        self.assertEqual(type(ast.expression),parser.Literal)
-        self.assertEqual(ast.expression.type,'float')
-        self.assertEqual(ast.expression.val,1.0)
+        self.assertEqual(type(ast), parser.DeclStmt)
+        self.assertEqual(ast.type, 'float')
+        self.assertEqual(ast.variable, 'y')
+        self.assertEqual(type(ast.expression), parser.Literal)
+        self.assertEqual(ast.expression.type, 'float')
+        self.assertEqual(ast.expression.val, 1.0)
 
     def test_compound(self):
         ast = parser.parse("""{
@@ -180,29 +181,29 @@ class TestAST(unittest.TestCase):
 
     def test_expression(self):
         ast = parser.parse('(4*3)+(2-1);')
-        self.assertEqual(type(ast),parser.BinOp)
-        self.assertEqual(ast.operation,'+')
-        self.assertEqual(type(ast.lhs),parser.BinOp)
-        self.assertEqual(ast.lhs.operation,'*')
-        self.checkLiteral(ast.lhs.lhs,'int',4)
-        self.checkLiteral(ast.lhs.rhs,'int',3)
-        self.assertEqual(type(ast.rhs),parser.BinOp)
-        self.assertEqual(ast.rhs.operation,'-')
-        self.checkLiteral(ast.rhs.lhs,'int',2)
-        self.checkLiteral(ast.rhs.rhs,'int',1)
+        self.assertEqual(type(ast), parser.BinOp)
+        self.assertEqual(ast.operation, '+')
+        self.assertEqual(type(ast.lhs), parser.BinOp)
+        self.assertEqual(ast.lhs.operation, '*')
+        self.checkLiteral(ast.lhs.lhs, 'int', 4)
+        self.checkLiteral(ast.lhs.rhs, 'int', 3)
+        self.assertEqual(type(ast.rhs), parser.BinOp)
+        self.assertEqual(ast.rhs.operation, '-')
+        self.checkLiteral(ast.rhs.lhs, 'int', 2)
+        self.checkLiteral(ast.rhs.rhs, 'int', 1)
 
     def test_dangling_else(self):
         ast = parser.parse(
-        """if(1)
+            """if(1)
             if(2){
             }else
                 1.0;""")
-        self.assertEqual(type(ast),parser.IfStmt)
+        self.assertEqual(type(ast), parser.IfStmt)
         # else belongs to inner if
-        self.assertEqual(ast.else_stmt,None)
-        self.assertEqual(type(ast.if_stmt),parser.IfStmt)
-        self.assertNotEqual(ast.if_stmt.else_stmt,None)
-        self.assertEqual(type(ast.if_stmt.else_stmt),parser.Literal)
+        self.assertEqual(ast.else_stmt, None)
+        self.assertEqual(type(ast.if_stmt), parser.IfStmt)
+        self.assertNotEqual(ast.if_stmt.else_stmt, None)
+        self.assertEqual(type(ast.if_stmt.else_stmt), parser.Literal)
 
 
 if __name__ == '__main__':

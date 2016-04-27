@@ -519,9 +519,9 @@ class TestLiveness(unittest.TestCase):
         cfg = codetocfg(code)
 
         outb, _ = dataflow.liveness(bbs, cfg)
-        self.assertEqual(outb[0], set(['a','b']))
-        self.assertEqual(outb[1], set(['a','b']))
-        self.assertEqual(outb[2], set(['a','b']))
+        self.assertEqual(outb[0], set(['a', 'b']))
+        self.assertEqual(outb[1], set(['a', 'b']))
+        self.assertEqual(outb[2], set(['a', 'b']))
         self.assertEqual(outb[3], set(['b']))
         self.assertEqual(outb[4], set(['b']))
         self.assertEqual(outb[5], set(['b']))
@@ -540,10 +540,8 @@ class TestLiveness(unittest.TestCase):
         }"""
         bbs = codetobbs(code)
         cfg = codetocfg(code)
-        print(cfg)
 
-        outb, _ = dataflow.liveness(bbs, cfg, verbose=2)
-        print(outb)
+        outb, _ = dataflow.liveness(bbs, cfg)
         # a = 0, b = 0
         self.assertEqual(outb[0], set())
         # while(1)
