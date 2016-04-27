@@ -16,6 +16,7 @@ is a nice library which generates a parse tree of a grammar defined in EBNF and 
 ### parser.py
 visits the parse tree from the previous stage and creates the AST with the following nodes:
   * **IfStmt** (`expression`, `if_stmt`, `else_stmt`)
+  * **WhileStmt** (`expression`, `stmt`)
   * **DeclStmt** (`type`, `variable`, `expression`)
   * **CompStmt** (`stmts`)
   * **BinOp** (`operation`, `lhs`, `rhs`)
@@ -25,7 +26,7 @@ visits the parse tree from the previous stage and creates the AST with the follo
 
    `expression`, `lhs`, `rhs` can be of type **BinOp**, **UnaOp**, **Literal** or **Variable**
    
-   `if_stmt`, `else_stmt`, `stmts (list)` have the type **IfStmt**, **DeclStmt** or **CompStmt**
+   `if_stmt`, `stmt`, `else_stmt`, `stmts (list)` have the type **IfStmt**, **DeclStmt** or **CompStmt**
    
    `type` can be `'int'` or `'float'`
 
@@ -128,32 +129,32 @@ All the scripts also accept some verbose flags for debugging: `-v / -vv / -vvv`
 
 * Parser (source code to AST)
   ```
-  $ python src/parser.py examples/test01.mc
+  $ python -m src.parser examples/test01.mc
   ```
 * Three (AST to 3-address-code)
   ```
-  $ python src/three.py examples/test01.mc
+  $ python -m src.three examples/test01.mc
   ```
 * BB (3-address-code to basic blocks)
   ```
-  $ python src/bb.py examples/test01.mc
+  $ python -m src.bb examples/test01.mc
   ```
 * LVN (local value numbering on basic blocks)
   ```
-  $ python src/lvn.py examples/test01.mc
+  $ python -m src.lvn examples/test01.mc
   ```
 * CFG (control flow graph of basic blocks)
   ```
-  $ python src/cfg.py examples/test01.mc graph.dot [--lvn]
+  $ python -m src.cfg examples/test01.mc graph.dot [--lvn]
   ```
 * Dataflow (Live Variable Analysis)
   ```
-  $ python src/dataflow.py examples/test23.mc
+  $ python -m src.dataflow examples/test23.mc
   ```
 
 ## Example
 ```
-> python src/cfg.py examples/test01.mc graph.dot --lvn
+> python -m src.cfg examples/test01.mc graph.dot --lvn
 
 ############# Source code ##############
 {
