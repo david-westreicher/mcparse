@@ -35,8 +35,8 @@ def printbbs(bbs, nice=True):
 
 if __name__ == '__main__':
     import argparse
-    from parser import parsefile
-    from three import asttothree
+    from .parser import parsefile
+    from .three import asttothree
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to translate to basic blocks")
     parser.add_argument('--verbose', '-v', action='count', default=0)

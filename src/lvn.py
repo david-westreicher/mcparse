@@ -74,9 +74,9 @@ def lvn(bbs, verbose=0):
 
 if __name__ == '__main__':
     import argparse
-    from parser import parsefile
-    from three import asttothree
-    from bb import threetobbs, printbbs
+    from .parser import parsefile
+    from .three import asttothree
+    from .bb import threetobbs, printbbs
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to translate to basic codes")
     parser.add_argument('--verbose', '-v', action='count', default=0)
