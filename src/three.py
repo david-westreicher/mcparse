@@ -1,5 +1,5 @@
-from parser import parsefile, prettyast
-from parser import IfStmt, WhileStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
+from .parser import parsefile, prettyast
+from .parser import IfStmt, WhileStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
 import warnings
 
 

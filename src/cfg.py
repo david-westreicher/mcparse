@@ -29,7 +29,7 @@ def bbstocfg(bbs, verbose=0, dotfile = None):
 
 def makeDotFile(bbs,cfg,dotfile):
     import cgi
-    from three import prettythreestr
+    from .three import prettythreestr
     with open(dotfile,'w') as f:
         f.write('digraph R {\n')
         f.write('node [shape=plaintext]\n')
@@ -53,10 +53,10 @@ def makeDotFile(bbs,cfg,dotfile):
 
 if __name__ == '__main__':
     import argparse
-    from parser import parsefile
-    from three import asttothree
-    from bb import threetobbs
-    from lvn import lvn
+    from .parser import parsefile
+    from .three import asttothree
+    from .bb import threetobbs
+    from .lvn import lvn
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to convert into a Control Flow Graph and Basic Blocks")
     parser.add_argument('dotfile', default=None)

@@ -1,4 +1,4 @@
-from utils import isvar
+from .utils import isvar
 
 
 def liveness(bbs, cfg, verbose=0):
@@ -62,7 +62,7 @@ def worklist(bbs, cfg, initer, transform, backward=False):
 
 def printinout(bbs, inb, outb, backward):
     print('\n' + ' Live variable analysis '.center(40, '#'))
-    from three import printthree
+    from .three import printthree
     for i, block in enumerate(bbs):
         if not backward:
             print('IN: {%s}' % ', '.join(inb[i]))
@@ -78,11 +78,11 @@ def printinout(bbs, inb, outb, backward):
 
 if __name__ == '__main__':
     import argparse
-    from parser import parsefile
-    from three import asttothree
-    from bb import threetobbs
-    from cfg import bbstocfg
-    from lvn import lvn
+    from .parser import parsefile
+    from .three import asttothree
+    from .bb import threetobbs
+    from .cfg import bbstocfg
+    from .lvn import lvn
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to apply Data Flow Analysis to")
     parser.add_argument('--verbose', '-v', action='count', default=0)

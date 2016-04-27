@@ -1,4 +1,4 @@
-from bb import printbbs
+from .bb import printbbs
 
 def localvaluenumbering(basicblock):
     values = {}
@@ -18,7 +18,7 @@ def localvaluenumbering(basicblock):
 
         e = (op,valueargs[0],valueargs[1])
         if op in ['+','*','==','!=']:
-            if valueargs[0]>valueargs[1]:
+            if str(valueargs[0])>str(valueargs[1]):
                 e = (op,valueargs[0],valueargs[1])
             else:
                 e = (op,valueargs[1],valueargs[0])
@@ -74,9 +74,9 @@ def lvn(bbs, verbose=0):
 
 if __name__ == '__main__':
     import argparse
-    from parser import parsefile
-    from three import asttothree
-    from bb import threetobbs, printbbs
+    from .parser import parsefile
+    from .three import asttothree
+    from .bb import threetobbs, printbbs
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to translate to basic codes")
     parser.add_argument('--verbose', '-v', action='count', default=0)
