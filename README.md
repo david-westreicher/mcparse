@@ -92,6 +92,16 @@ The AST nodes get translated by the following rules
       * `label elselabel`
       * generate `else_stmt` code
       * `label endlabel`
+  * **WhileStmt** (`expression`, `stmt`)
+      * generate `startlabel`
+      * `label startlabel`
+      * generate `tmpvar`
+      * generate `expression` code and save into `tmpvar`
+      * generate `endlabel`
+      * `jumpfalse tmpvar endlabel`
+      * generate `stmt` code
+      * `jump startlabel`
+      * `label endlabel`
   * **DeclStmt** (`type`, `variable`, `expression`)
       * generate `tmpvar`
       * generate `expression` code and save into `tmpvar`
