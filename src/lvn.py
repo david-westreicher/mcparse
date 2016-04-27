@@ -1,4 +1,4 @@
-from bb import printbbs
+from .bb import printbbs
 
 def localvaluenumbering(basicblock):
     values = {}
@@ -18,7 +18,7 @@ def localvaluenumbering(basicblock):
 
         e = (op,valueargs[0],valueargs[1])
         if op in ['+','*','==','!=']:
-            if valueargs[0]>valueargs[1]:
+            if str(valueargs[0])>str(valueargs[1]):
                 e = (op,valueargs[0],valueargs[1])
             else:
                 e = (op,valueargs[1],valueargs[0])

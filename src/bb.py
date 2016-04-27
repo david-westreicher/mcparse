@@ -1,4 +1,4 @@
-from three import printthree
+from .three import printthree
 
 
 def threetobbs(threes, verbose=0):

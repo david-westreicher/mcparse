@@ -1,4 +1,4 @@
-from utils import isvar
+from .utils import isvar
 
 
 def liveness(bbs, cfg, verbose=0):

@@ -17,7 +17,7 @@ class TestGrammar(unittest.TestCase):
             if not result:
                 passed = False
                 print('"%s" is a %s' % (stmt, rule))
-        except Exception, e:
+        except Exception as e:
             if result:
                 passed = False
                 print('"%s" is not a %s' % (stmt, rule))
