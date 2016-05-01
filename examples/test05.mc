@@ -1,5 +1,5 @@
 {
-    int y=0.0;
+    int y=1.0;
     if(y>0){
         int res = 0.5;
         {
