@@ -6,9 +6,10 @@ from parsimonious import Grammar, NodeVisitor
 
 mcgrammar = Grammar(
     """
-    statement        = if_stmt / while_stmt / decl_stmt / compound_stmt / expr_stmt
+    statement        = if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
     if_stmt          = "if" _ paren_expr _ statement (_ "else" _ statement)?
     while_stmt       = "while" _ paren_expr _ statement
+    for_stmt         = "for" _ "(" _ expression _ ";" _ expression _ ";" _ expression _ ")" _ statement
     decl_stmt        = type _ identifier (_ "=" _ expression)? _ ";"
     compound_stmt    = "{" _ (statement _)* "}"
     expr_stmt        = expression _ ";"
@@ -29,6 +30,7 @@ mcgrammar = Grammar(
 
 IfStmt = namedtuple('IfStmt', ['expression', 'if_stmt', 'else_stmt'])
 WhileStmt = namedtuple('WhileStmt', ['expression', 'stmt'])
+ForStmt = namedtuple('ForStmt', ['initexpr', 'conditionexpr', 'afterexpr', 'stmt'])
 DeclStmt = namedtuple('DeclStmt', ['type', 'variable', 'expression'])
 CompStmt = namedtuple('CompStmt', ['stmts'])
 BinOp = namedtuple('BinOp', ['operation', 'lhs', 'rhs'])
@@ -50,6 +52,10 @@ class ASTFormatter(NodeVisitor):
     def visit_while_stmt(self, node, childs):
         expression, stmt = (childs[i] for i in [2, 4])
         return WhileStmt(expression, stmt)
+
+    def visit_for_stmt(self, node, childs):
+        initexpr, conditionexpr, afterexp, stmt = (childs[i] for i in [4, 8, 12, 16])
+        return ForStmt(initexpr, conditionexpr, afterexp, stmt)
 
     def visit_decl_stmt(self, node, childs):
         vartype, variable, expression = (childs[i] for i in [0, 2, 3])

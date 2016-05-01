@@ -1,5 +1,5 @@
 from .parser import parsefile, prettyast
-from .parser import IfStmt, WhileStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
+from .parser import IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
 import warnings
 
 
@@ -76,14 +76,13 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     three = [] if three is None else three
 
     if type(ast) == IfStmt:
-        if ast.if_stmt is None and ast.else_stmt is None:
-            # TODO possible bug: the expression is actually an assignment :(
-            return []
-
         tmpvar = scope.newtemp()
         endiflabel = scope.newlabel()
+
+        if ast.if_stmt is None and ast.else_stmt is None:
+            asttothree(ast.expression, three, scope, tmpvar)
         # TODO could optimize further if if_stmt is None (-> empty if compound)
-        if ast.else_stmt is None:
+        elif ast.else_stmt is None:
             asttothree(ast.expression, three, scope, tmpvar)
             three.append(['jumpfalse', tmpvar, None, endiflabel])
 
@@ -125,6 +124,26 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         scope.close()
 
         three.append(['label', None, None, endwhilelabel])
+
+    if type(ast) == ForStmt:
+        # initialization
+        asttothree(ast.initexpr, three, scope, None)
+        # condition
+        conditionlabel = scope.newlabel()
+        three.append(['label', None, None, conditionlabel])
+        condvar = scope.newtemp()
+        asttothree(ast.conditionexpr, three, scope, condvar)
+        endforlabel = scope.newlabel()
+        three.append(['jumpfalse', condvar, None, endforlabel])
+        # body
+        scope.open()
+        asttothree(ast.stmt, three, scope)
+        # afterthought
+        asttothree(ast.afterexpr, three, scope, None)
+        three.append(['jump', None, None, conditionlabel])
+        scope.close()
+        # end
+        three.append(['label', None, None, endforlabel])
 
     if type(ast) == DeclStmt:
         if ast.variable in scope.scopestack[-1]:
