@@ -131,7 +131,7 @@ class TestExpression(unittest.TestCase):
                 self.assertEqual(executecode(code)['x'], a - b)
                 if b != 0:
                     code = '''int x = (%d) / (%d);''' % (a, b)
-                    self.assertEqual(executecode(code)['x'], a / b)
+                    self.assertEqual(executecode(code)['x'], a // b)
                     code = '''int x = (%d) %% (%d);''' % (a, b)
                     self.assertEqual(executecode(code)['x'], a % b)
                 code = '''int x = (%d) == (%d);''' % (a, b)

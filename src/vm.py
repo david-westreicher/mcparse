@@ -29,7 +29,7 @@ operations = {
     '+': lambda x, y: x + y,
     '-': lambda x, y: x - y,
     '*': lambda x, y: x * y,
-    '/': lambda x, y: x / y,
+    '/': lambda x, y: x // y,
     '%': lambda x, y: x % y,
     'u!': lambda x: not x,
     'u-': lambda x: - x,
