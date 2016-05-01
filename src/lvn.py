@@ -75,6 +75,7 @@ def removeunusedlines(bbs):
     for blocknum in reversed(unneccesaryblocks):
         del bbs[blocknum]
 
+
 def lvn(bbs, verbose=0):
     for bb in bbs:
         localvaluenumbering(bb)

@@ -1,24 +1,3 @@
-from collections import namedtuple
-
-
-class Programcounter:
-
-    def __init__(self, block, line):
-        self.block = block
-        self.line = line
-
-    def __str__(self):
-        return '[block: %d, line: %d]' % (self.block, self.line)
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __eq__(self, other):
-        return self.block == other.block and self.line == other.line
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
 operations = {
     '<=': lambda x, y: x <= y,
     '>=': lambda x, y: x >= y,
@@ -41,8 +20,9 @@ def run(bbs, verbose=0):
     if len(bbs) == 0:
         return {}
 
-    pc = Programcounter(0, 0)
-    end = Programcounter(len(bbs) - 1, len(bbs[-1]) - 1)
+    # program counter [block,line]
+    pc = [0, 0]
+    end = [len(bbs) - 1, len(bbs[-1]) - 1]
     vals = {'default-int': 0, 'default-float': 0.0}
 
     def toval(arg):
@@ -58,18 +38,15 @@ def run(bbs, verbose=0):
             labels[result] = (blocknum, linenum)
 
     while True:
-        op, arg1, arg2, result = bbs[pc.block][pc.line]
-        # print(op,arg1,arg2, result)
-        # print(pc, vals)
-        # print(pc,end, labels)
+        op, arg1, arg2, result = bbs[pc[0]][pc[1]]
         if op == 'assign':
             vals[result] = toval(arg1)
         if op == 'jump':
-            pc = Programcounter(*(el for el in labels[result]))
+            pc = list(labels[result])
             continue
         if op == 'jumpfalse':
             if not toval(arg1):
-                pc = Programcounter(*(el for el in labels[result]))
+                pc = list(labels[result])
                 continue
         if op in operations:
             isunop = op == '!' or (op == '-' and arg2 is None)
@@ -80,10 +57,11 @@ def run(bbs, verbose=0):
 
         if pc == end:
             break
-        pc.line += 1
-        if pc.line >= len(bbs[pc.block]):
-            pc.block += 1
-            pc.line = 0
+        # next line
+        pc[1] += 1
+        if pc[1] >= len(bbs[pc[0]]):
+            pc[0] += 1
+            pc[1] = 0
 
     tmpvars = [el for el in vals if el.startswith('.t')] + ['default-int', 'default-float']
     vals = {el: vals[el] for el in vals if el not in tmpvars}
