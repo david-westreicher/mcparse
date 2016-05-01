@@ -43,38 +43,43 @@ def localvaluenumbering(basicblock):
             code[1] = values[e]
 
 
-def removeunusedlines(bb):
-    usedtemps = []
-    for op, arg1, arg2, res in bb:
-        if op in ['jump', 'label']:
-            continue
-        for arg in [arg1, arg2]:
-            if arg is None:
+def removeunusedlines(bbs):
+    unneccesaryblocks = []
+    for blocknum, bb in enumerate(bbs):
+        usedtemps = []
+        for op, arg1, arg2, res in bb:
+            if op in ['jump', 'label']:
                 continue
-            if type(arg) is not str:
-                continue
-            if not arg.startswith('.t'):
-                continue
-            usedtemps.append(arg)
+            for arg in [arg1, arg2]:
+                if arg is None:
+                    continue
+                if type(arg) is not str:
+                    continue
+                if not arg.startswith('.t'):
+                    continue
+                usedtemps.append(arg)
 
-    unneccesarylines = []
-    for i, (op, arg1, arg2, res) in enumerate(bb):
-        if op in ['jump', 'jumpfalse', 'label']:
-            continue
-        if not res.startswith('.t'):
-            continue
-        if res in usedtemps:
-            continue
-        unneccesarylines.append(i)
-    for i in reversed(unneccesarylines):
-        del bb[i]
-
+        unneccesarylines = []
+        for i, (op, arg1, arg2, res) in enumerate(bb):
+            if op in ['jump', 'jumpfalse', 'label']:
+                continue
+            if not res.startswith('.t'):
+                continue
+            if res in usedtemps:
+                continue
+            unneccesarylines.append(i)
+        for i in reversed(unneccesarylines):
+            del bb[i]
+        if len(bb) == 0:
+            unneccesaryblocks.append(blocknum)
+    for blocknum in reversed(unneccesaryblocks):
+        del bbs[blocknum]
 
 def lvn(bbs, verbose=0):
     for bb in bbs:
         localvaluenumbering(bb)
         # cleanup
-        removeunusedlines(bb)
+    removeunusedlines(bbs)
     if verbose > 0:
         print('\n' + ' Local Value Numbering '.center(40, '#'))
         printbbs(bbs)
