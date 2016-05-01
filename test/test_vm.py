@@ -3,8 +3,6 @@ from src import three
 from src import parser
 from src import bb
 from src import lvn
-from src import cfg
-from src import dataflow
 from src import vm
 
 

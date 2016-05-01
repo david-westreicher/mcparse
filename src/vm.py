@@ -1,3 +1,5 @@
+from recordclass import recordclass
+
 operations = {
     '<=': lambda x, y: x <= y,
     '>=': lambda x, y: x >= y,
@@ -14,15 +16,15 @@ operations = {
     'u-': lambda x: - x,
     '!': None
 }
+ProgramCounter = recordclass('ProgramCounter', 'block line')
 
 
 def run(bbs, verbose=0):
     if len(bbs) == 0:
         return {}
 
-    # program counter [block,line]
-    pc = [0, 0]
-    end = [len(bbs) - 1, len(bbs[-1]) - 1]
+    pc = ProgramCounter(0, 0)
+    end = ProgramCounter(len(bbs) - 1, len(bbs[-1]) - 1)
     vals = {'default-int': 0, 'default-float': 0.0}
 
     def toval(arg):
@@ -38,15 +40,15 @@ def run(bbs, verbose=0):
             labels[result] = (blocknum, linenum)
 
     while True:
-        op, arg1, arg2, result = bbs[pc[0]][pc[1]]
+        op, arg1, arg2, result = bbs[pc.block][pc.line]
         if op == 'assign':
             vals[result] = toval(arg1)
         if op == 'jump':
-            pc = list(labels[result])
+            pc = ProgramCounter(*labels[result])
             continue
         if op == 'jumpfalse':
             if not toval(arg1):
-                pc = list(labels[result])
+                pc = ProgramCounter(*labels[result])
                 continue
         if op in operations:
             isunop = op == '!' or (op == '-' and arg2 is None)
@@ -58,10 +60,10 @@ def run(bbs, verbose=0):
         if pc == end:
             break
         # next line
-        pc[1] += 1
-        if pc[1] >= len(bbs[pc[0]]):
-            pc[0] += 1
-            pc[1] = 0
+        pc.line += 1
+        if pc.line >= len(bbs[pc.block]):
+            pc.block += 1
+            pc.line = 0
 
     tmpvars = [el for el in vals if el.startswith('.t')] + ['default-int', 'default-float']
     vals = {el: vals[el] for el in vals if el not in tmpvars}
