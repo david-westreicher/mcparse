@@ -17,6 +17,7 @@ is a nice library which generates a parse tree of a grammar defined in EBNF and 
 visits the parse tree from the previous stage and creates the AST with the following nodes:
   * **IfStmt** (`expression`, `if_stmt`, `else_stmt`)
   * **WhileStmt** (`expression`, `stmt`)
+  * **ForStmt** (`initexpr`, `conditionexpr`, `afterexpr`, `stmt`)
   * **DeclStmt** (`type`, `variable`, `expression`)
   * **CompStmt** (`stmts`)
   * **BinOp** (`operation`, `lhs`, `rhs`)
@@ -102,6 +103,18 @@ The AST nodes get translated by the following rules
       * generate `stmt` code
       * `jump startlabel`
       * `label endlabel`
+  * **ForStmt** (`initexpr`, `conditionexpr`, `afterexpr`, `stmt`)
+      * generate `initexpr` code
+      * generate `conditionlabel`
+      * `label conditionlabel`
+      * generate `condvar`
+      * generate `conditionexpr` code and save into `condvar`
+      * generate `endforlabel`
+      * `jumpfalse condvar endforlabel`
+      * generate `stmt` code
+      * generate `afterexpr` code
+      * `jump conditionlabel`
+      * `label endforlabel`
   * **DeclStmt** (`type`, `variable`, `expression`)
       * generate `tmpvar`
       * generate `expression` code and save into `tmpvar`
@@ -127,6 +140,18 @@ There is also a special case where the **BinOp** is actually an assignment (if t
 
 ### bb.py
 transforms the 3-address-code into basic blocks by finding block leaders.
+
+### cfg.py
+creates a control flow graph (`cfg: 'int' -> '[int]'`) from some basic blocks.
+
+### lvn.py
+optimizes the 3-addr.-code with **Local Value Numbering** and removes unnecessary assignments to temporary variables.
+
+### dataflow.py
+implements the **Worklist algorithm** and does **Liveness Analysis** on the code.
+
+### vm.py
+returns the values of the variables after the code was run.
 
 ## Build
 ```shell
@@ -160,6 +185,10 @@ All the scripts also accept some verbose flags for debugging: `-v / -vv / -vvv`
 * Dataflow (Live Variable Analysis)
   ```
   $ python -m src.dataflow examples/test23.mc
+  ```
+* Virtual Machine 
+  ```
+  $ python -m src.vm examples/test23.mc
   ```
 
 ## Example
