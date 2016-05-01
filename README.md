@@ -66,7 +66,7 @@ x   :=      y
 ```
 ```python
 [binop      , arg1, arg2, result]
-# binop can be any of ['+', '-', '*', '/', '==', '!=', '<=', '>=', '<', '>']
+# binop can be any of ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
 # Assigns the result of the operation 'binop' (of the value/register 'arg1' and the value/register 'arg2') to the register 'result'
 ['+', 4, t1, 'x']
 x   :=      4   +   t1

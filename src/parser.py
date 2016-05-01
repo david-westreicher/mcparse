@@ -17,7 +17,7 @@ mcgrammar = Grammar(
     expression       = binary_operation / single_expr
     binary_operation = single_expr _ bin_op _ expression
     single_expr      = paren_expr / unary_expr / literal / identifier
-    bin_op           = "+" / "-" / "*" / "/" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
+    bin_op           = "+" / "-" / "*" / "/" / "%" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
     paren_expr       = "(" _ expression _ ")"
     unary_expr       = unop _ expression
     unop             = "-" / "!"
