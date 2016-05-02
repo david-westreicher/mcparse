@@ -193,79 +193,81 @@ All the scripts also accept some verbose flags for debugging: `-v / -vv / -vvv`
 
 ## Example
 ```
-> python -m src.cfg examples/test01.mc graph.dot --lvn
+$ python -m src.cfg examples/fib.mc graph.dot --lvn
 
 ############# Source code ##############
 {
-	int _x=1;
-	float y = 3.0;
-	if(_x > 0) {
-		y = y * 1.5;
-	} else {
-		y = y + 2.0;
-	}
+    int nthfib = 10;
+    int f1 = 0;
+    int f2 = 1;
+    int i;
+    for(i=0;i<nthfib;i=i+1){
+        int nextfib = f1+f2;
+        f1 = f2;
+        f2 = nextfib;
+    }
+    int fib = f1;
 }
 
-############# Basic Blocks #############
-Basic Block #0
-.t0	:=	1
-_x	:=	.t0
-.t1	:=	3.0
-y	:=	.t1
-.t3	:=	_x
-.t4	:=	0
-.t2	:=	.t3	>	.t4
-jumpfalse	.t2	L1
-
-Basic Block #1
-.t6	:=	y
-.t7	:=	1.5
-.t5	:=	.t6	*	.t7
-y	:=	.t5
-jump		L0
-
-Basic Block #2
-label		L1
-.t9	:=	y
-.t10	:=	2.0
-.t8	:=	.t9	+	.t10
-y	:=	.t8
-
-Basic Block #3
-label		L0
-
 ######## Local Value Numbering #########
-Basic Block #0
-_x	:=	1
-y	:=	3.0
-.t2	:=	1	>	0
-jumpfalse	.t2	L1
+------------ Basic Block 0 -------------
+nthfib	:=	10
+f1	:=	0
+f2	:=	1
+i	:=	default-int
+i	:=	0
 
 
-Basic Block #1
-.t5	:=	y	*	1.5
-y	:=	.t5
+------------ Basic Block 1 -------------
+label		L0
+.t4	:=	i	<	nthfib
+jumpfalse		.t4	L1
+
+
+------------ Basic Block 2 -------------
+.t7	:=	f1	+	f2
+nextfib	:=	.t7
+f1	:=	f2
+f2	:=	.t7
+.t12	:=	i	+	1
+i	:=	.t12
 jump		L0
 
 
-Basic Block #2
+------------ Basic Block 3 -------------
 label		L1
-.t8	:=	y	+	2.0
-y	:=	.t8
-
-
-Basic Block #3
-label		L0
+fib	:=	f1
 
 ########## Control Flow Graph ##########
-0	->	1, 2
-1	->	3
-2	->	3
+0	->	1
+1	->	2, 3
+2	->	1
 3	->	
 ```
 
 ![Example CFG](/docs/example.png "Example CFG")
 
+The VM computes the 10'th fibonacci number (notice `'fib': 55`)
+```
+$ python -m src.vm examples/fib.mc 
+
+############# Source code ##############
+{
+    int nthfib = 10;
+    int f1 = 0;
+    int f2 = 1;
+    int i;
+    for(i=0;i<nthfib;i=i+1){
+        int nextfib = f1+f2;
+        f1 = f2;
+        f2 = nextfib;
+    }
+    int fib = f1;
+}
+
+############## VM result ###############
+{'f1': 55, 'f2': 89, 'i': 10, 'nthfib': 10, 'fib': 55, 'nextfib': 89}
+```
 
 ## Tests
 ```

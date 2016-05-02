@@ -215,7 +215,7 @@ def prettythreestr(op, arg1, arg2, res):
     elif op in ['label', 'jump']:
         return "%s\t\t%s" % (op, res)
     elif op == 'jumpfalse':
-        return "%s\t%s\t%s" % ('jumpfalse', arg1, res)
+        return "%s\t\t%s\t%s" % ('jumpfalse', arg1, res)
     elif arg2 is not None:
         # binary operation
         return "%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2)

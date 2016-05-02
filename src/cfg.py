@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 args.filename,
                 verbose=args.verbose - 2),
             verbose=args.verbose - 1),
-        verbose=1)
+        verbose=1 if not args.lvn else 0)
     if args.lvn:
         bbs = lvn(bbs, verbose=1)
     bbstocfg(bbs, args.verbose + 1, args.dotfile)
