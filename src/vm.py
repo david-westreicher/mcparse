@@ -1,62 +1,122 @@
-operations = {
-    '<=': lambda x, y: x <= y,
-    '>=': lambda x, y: x >= y,
-    '==': lambda x, y: x == y,
-    '!=': lambda x, y: x != y,
-    '<': lambda x, y: x < y,
-    '>': lambda x, y: x > y,
-    '+': lambda x, y: x + y,
-    '-': lambda x, y: x - y,
-    '*': lambda x, y: x * y,
-    '/': lambda x, y: x // y,
-    '%': lambda x, y: x % y,
-    'u!': lambda x: not x,
-    'u-': lambda x: - x,
-    '!': None
-}
+opcode = [
+    'assign',     # 00
+    'jump',       # 01
+    'jumpfalse',  # 02
+    '<=',         # 03
+    '>=',         # 04
+    '==',         # 05
+    '!=',         # 06
+    '<',          # 07
+    '>',          # 08
+    '+',          # 09
+    '-',          # 10
+    '*',          # 11
+    '/',          # 12
+    '%',          # 13
+    'u-',         # 14
+    '!',          # 15
+]
+
+
+def bbs_to_bytecode(bbs):
+    # flatten basic blocks
+    code = [instr for bb in bbs for instr in bb]
+
+    # remove label instructions but remember line number of labels
+    label_to_line = {}
+    linestoremove = []
+    for linenum, (op, _, _, result) in enumerate(code):
+        if op != 'label':
+            continue
+        label_to_line[result] = linenum - len(linestoremove)
+        linestoremove.append(linenum)
+    code = [instr for linenum, instr in enumerate(code) if linenum not in linestoremove]
+
+    mem = []
+    arg_to_mem = {}
+
+    def memloc(arg):
+        if arg is None:
+            return None
+        if arg in arg_to_mem:
+            return arg_to_mem[arg]
+        arg_to_mem[arg] = len(arg_to_mem)
+        if type(arg) is str:
+            if arg.startswith('default-'):
+                mem.append(0)
+            else:
+                mem.append(None)
+        else:
+            mem.append(arg)
+        return arg_to_mem[arg]
+
+    # rewrite instructions with opcodes
+    # line number for jumps instead of labels
+    # memlocations instead of registernames
+    for i, (op, arg1, arg2, result) in enumerate(code):
+        if op == 'jump' or op == 'jumpfalse':
+            result = label_to_line[result]
+            arg1, arg2 = (memloc(el) for el in [arg1, arg2])
+        else:
+            arg1, arg2, result = (memloc(el) for el in [arg1, arg2, result])
+        if op == '-' and arg2 is None:
+            op = opcode.index('u-')
+        else:
+            op = opcode.index(op)
+        code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
+
+    return code, mem, arg_to_mem
 
 
 def run(bbs, verbose=0):
     if len(bbs) == 0:
         return {}
-    code = [instr for bb in bbs for instr in bb]
 
-    vals = {'default-int': 0, 'default-float': 0.0}
-
-    def toval(arg):
-        if type(arg) is str:
-            return vals[arg]
-        return arg
-    label_to_line = {}
-    for linenum, (op, _, _, result) in enumerate(code):
-        if op != 'label':
-            continue
-        label_to_line[result] = linenum
+    code, mem, arg_to_mem = bbs_to_bytecode(bbs)
 
     pc = 0
     end = len(code) - 1
     while pc <= end:
         op, arg1, arg2, result = code[pc]
-        if op == 'assign':
-            vals[result] = toval(arg1)
-        if op == 'jump':
-            pc = label_to_line[result]
+        if op == 0:
+            mem[result] = mem[arg1]
+        elif op == 1:
+            pc = result
             continue
-        if op == 'jumpfalse':
-            if not toval(arg1):
-                pc = label_to_line[result]
+        elif op == 2:
+            if not mem[arg1]:
+                pc = result
                 continue
-        if op in operations:
-            isunop = op == '!' or (op == '-' and arg2 is None)
-            if isunop:
-                vals[result] = operations['u' + op](toval(arg1))
-            else:
-                vals[result] = operations[op](toval(arg1), toval(arg2))
+        elif op == 3:
+            mem[result] = mem[arg1] <= mem[arg2]
+        elif op == 4:
+            mem[result] = mem[arg1] >= mem[arg2]
+        elif op == 5:
+            mem[result] = mem[arg1] == mem[arg2]
+        elif op == 6:
+            mem[result] = mem[arg1] != mem[arg2]
+        elif op == 7:
+            mem[result] = mem[arg1] < mem[arg2]
+        elif op == 8:
+            mem[result] = mem[arg1] > mem[arg2]
+        elif op == 9:
+            mem[result] = mem[arg1] + mem[arg2]
+        elif op == 10:
+            mem[result] = mem[arg1] - mem[arg2]
+        elif op == 11:
+            mem[result] = mem[arg1] * mem[arg2]
+        elif op == 12:
+            mem[result] = mem[arg1] // mem[arg2]
+        elif op == 13:
+            mem[result] = mem[arg1] % mem[arg2]
+        elif op == 14:
+            mem[result] = -mem[arg1]
+        elif op == 15:
+            mem[result] = not mem[arg1]
         pc += 1
 
-    tmpvars = [el for el in vals if el.startswith('.t')] + ['default-int', 'default-float']
-    vals = {el: vals[el] for el in vals if el not in tmpvars}
-
+    vals = {arg: mem[mempos] for arg, mempos in arg_to_mem.items()
+            if type(arg) is str and not arg.startswith('.t')}
     if verbose > 0:
         print('\n' + ' VM result '.center(40, '#'))
         print(vals)
