@@ -1,5 +1,3 @@
-from recordclass import recordclass
-
 operations = {
     '<=': lambda x, y: x <= y,
     '>=': lambda x, y: x >= y,
@@ -16,39 +14,37 @@ operations = {
     'u-': lambda x: - x,
     '!': None
 }
-ProgramCounter = recordclass('ProgramCounter', 'block line')
 
 
 def run(bbs, verbose=0):
     if len(bbs) == 0:
         return {}
+    code = [instr for bb in bbs for instr in bb]
 
-    pc = ProgramCounter(0, 0)
-    end = ProgramCounter(len(bbs) - 1, len(bbs[-1]) - 1)
     vals = {'default-int': 0, 'default-float': 0.0}
 
     def toval(arg):
         if type(arg) is str:
             return vals[arg]
         return arg
+    label_to_line = {}
+    for linenum, (op, _, _, result) in enumerate(code):
+        if op != 'label':
+            continue
+        label_to_line[result] = linenum
 
-    labels = {}
-    for blocknum, bb in enumerate(bbs):
-        for linenum, (op, _, _, result) in enumerate(bb):
-            if op != 'label':
-                continue
-            labels[result] = (blocknum, linenum)
-
-    while True:
-        op, arg1, arg2, result = bbs[pc.block][pc.line]
+    pc = 0
+    end = len(code) - 1
+    while pc <= end:
+        op, arg1, arg2, result = code[pc]
         if op == 'assign':
             vals[result] = toval(arg1)
         if op == 'jump':
-            pc = ProgramCounter(*labels[result])
+            pc = label_to_line[result]
             continue
         if op == 'jumpfalse':
             if not toval(arg1):
-                pc = ProgramCounter(*labels[result])
+                pc = label_to_line[result]
                 continue
         if op in operations:
             isunop = op == '!' or (op == '-' and arg2 is None)
@@ -56,14 +52,7 @@ def run(bbs, verbose=0):
                 vals[result] = operations['u' + op](toval(arg1))
             else:
                 vals[result] = operations[op](toval(arg1), toval(arg2))
-
-        if pc == end:
-            break
-        # next line
-        pc.line += 1
-        if pc.line >= len(bbs[pc.block]):
-            pc.block += 1
-            pc.line = 0
+        pc += 1
 
     tmpvars = [el for el in vals if el.startswith('.t')] + ['default-int', 'default-float']
     vals = {el: vals[el] for el in vals if el not in tmpvars}
