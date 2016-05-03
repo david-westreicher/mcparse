@@ -67,6 +67,21 @@ def bbs_to_bytecode(bbs):
 
     return code, mem, arg_to_mem
 
+def generate_bytecode(bbs, bcfile, verbose=0):
+    if len(bbs) == 0:
+        return
+    code, mem, arg_to_mem = bbs_to_bytecode(bbs)
+    mem_to_arg = {k: v for v, k in arg_to_mem.items()}
+
+    with open(bcfile,'w') as f:
+        f.write('%d %d\n' % (len(mem), len(code)))
+        for i in range(len(mem)):
+            name = str(mem_to_arg[i])
+            val = 0 if mem[i] is None else mem[i]
+            f.write('%s %s\n' % (name,val))
+        for op, arg1, arg2, result in code:
+            f.write(' '.join([str(-1 if el is None else el) for el in [op,arg1,arg2,result]])+'\n')
+
 
 def run(bbs, verbose=0):
     if len(bbs) == 0:
@@ -120,6 +135,30 @@ def run(bbs, verbose=0):
     if verbose > 0:
         print('\n' + ' VM result '.center(40, '#'))
         print(vals)
+    if verbose > 1:
+        print('\n' + ' VM bytecode '.center(40, '#'))
+        mem_to_arg = {k: v for v, k in arg_to_mem.items()}
+        for linenum, (op, arg1, arg2, res) in enumerate(code):
+            op = opcode[op]
+            if op == 'assign':
+                res = mem_to_arg[res]
+                arg1 = mem_to_arg[arg1]
+            elif op == 'jumpfalse':
+                arg1 = mem_to_arg[arg1]
+            elif op == 'jump':
+                pass
+            else:
+                res = mem_to_arg[res]
+                arg1 = mem_to_arg[arg1]
+                arg2 = mem_to_arg[arg2]
+            if res is None:
+                res = ''
+            if arg1 is None:
+                arg1 = ''
+            if arg2 is None:
+                arg2 = ''
+            res, arg1, arg2 = str(res), str(arg1), str(arg2)
+            print('{:>3}\t{:10}\t{:10}\t{:10}\t{:10}'.format(str(linenum), op, arg1, arg2, res))
     return vals
 
 if __name__ == '__main__':
@@ -131,6 +170,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("filename", help="The *.mc file to run.")
     parser.add_argument('--lvn', '-l', action='count', default=False)
+    parser.add_argument('--bcfile', '-b', default=None)
     parser.add_argument('--verbose', '-v', action='count', default=0)
     args = parser.parse_args()
     bbs = threetobbs(
@@ -142,4 +182,7 @@ if __name__ == '__main__':
         verbose=args.verbose)
     if args.lvn:
         bbs = lvn(bbs, verbose=1)
-    run(bbs, args.verbose + 1)
+    if args.bcfile is not None:
+        generate_bytecode(bbs, args.bcfile, args.verbose + 1)
+    else:
+        run(bbs, args.verbose + 1)
