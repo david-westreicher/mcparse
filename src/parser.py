@@ -24,7 +24,7 @@ mcgrammar = Grammar(
     call_expr        = identifier _ "(" _ arguments _ ")"
     arguments        = expression ( _ "," _ expression )*
     binary_operation = single_expr _ bin_op _ expression
-    single_expr      = paren_expr / unary_expr / literal / identifier
+    single_expr      = paren_expr / unary_expr / literal / variable
     bin_op           = "+" / "-" / "*" / "/" / "%" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
     paren_expr       = "(" _ expression _ ")"
     unary_expr       = unop _ expression
@@ -32,6 +32,7 @@ mcgrammar = Grammar(
     literal          = float_lit / int_lit
     int_lit          = ~"\d+"
     float_lit        = ~"\d+\.\d*"
+    variable         = ~"[a-zA-Z_][a-zA-Z_0-9]*" 
     identifier       = ~"[a-zA-Z_][a-zA-Z_0-9]*"
     _                = ~"\s*"
     """)
@@ -61,19 +62,16 @@ class ASTFormatter(NodeVisitor):
             return [head] + tail
         return children
 
-    def visit_statement(self, node, childs):
-        return childs[0]
-
     def visit_fun_def(self, node, childs):
         ret_type, name, params, stmts = (childs[i] for i in [0, 2, 6, 10])
-        return FunDef(ret_type, name.name, params, stmts)
+        return FunDef(ret_type, name, params, stmts)
 
     def visit_params(self, node, childs):
         return self.rightrecursive_flatten(childs)
 
     def visit_param(self, node, childs):
         paramtype, name = (childs[i] for i in [0, 2])
-        return Param(paramtype, name.name)
+        return Param(paramtype, name)
 
     def visit_if_stmt(self, node, childs):
         expression, if_stmt, else_stmt = (childs[i] for i in [2, 4, 5])
@@ -88,8 +86,8 @@ class ASTFormatter(NodeVisitor):
         return ForStmt(initexpr, conditionexpr, afterexp, stmt)
 
     def visit_decl_stmt(self, node, childs):
-        vartype, variable, expression = (childs[i] for i in [0, 2, 3])
-        return DeclStmt(vartype, variable.name, expression)
+        vartype, varname, expression = (childs[i] for i in [0, 2, 3])
+        return DeclStmt(vartype, varname, expression)
 
     def visit_compound_stmt(self, node, childs):
         stmts = childs[2]
@@ -99,21 +97,15 @@ class ASTFormatter(NodeVisitor):
             stmts = [stmts]
         return CompStmt(stmts)
 
-    def visit_expr_stmt(self, node, childs):
-        return childs[0]
-
     def visit_type(self, node, childs):
         return node.text
 
     def visit_type_or_void(self, node, childs):
         return node.text
 
-    def visit_expression(self, node, childs):
-        return childs[0]
-
     def visit_call_expr(self, node, childs):
         name, args = (childs[i] for i in [0, 4])
-        return FunCall(name.name, args)
+        return FunCall(name, args)
 
     def visit_arguments(self, node, childs):
         return self.rightrecursive_flatten(childs)
@@ -122,14 +114,8 @@ class ASTFormatter(NodeVisitor):
         operation, lhs, rhs = (childs[i] for i in [2, 0, 4])
         return BinOp(operation, lhs, rhs)
 
-    def visit_single_expr(self, node, childs):
-        return childs[0]
-
     def visit_bin_op(self, node, childs):
         return node.text
-
-    def visit_paren_expr(self, node, childs):
-        return childs[2]
 
     def visit_unary_expr(self, node, childs):
         return UnaOp(*(childs[i] for i in [0, 2]))
@@ -137,17 +123,17 @@ class ASTFormatter(NodeVisitor):
     def visit_unop(self, node, childs):
         return node.text
 
-    def visit_literal(self, node, childs):
-        return childs[0]
-
     def visit_int_lit(self, node, childs):
         return Literal('int', int(node.text))
 
     def visit_float_lit(self, node, childs):
         return Literal('float', float(node.text))
 
-    def visit_identifier(self, node, childs):
+    def visit_variable(self, node, childs):
         return Variable(node.text)
+
+    def visit_identifier(self, node, childs):
+        return node.text
 
     def visit__(self, node, childs):
         return None
