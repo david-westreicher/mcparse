@@ -42,9 +42,6 @@ Variable = namedtuple('Variable', ['name'])
 class ASTFormatter(NodeVisitor):
     grammar = mcgrammar
 
-    def visit_statement(self, node, childs):
-        return childs[0]
-
     def visit_if_stmt(self, node, childs):
         expression, if_stmt, else_stmt = (childs[i] for i in [2, 4, 5])
         return IfStmt(expression, if_stmt, else_stmt)
@@ -69,36 +66,21 @@ class ASTFormatter(NodeVisitor):
             stmts = [stmts]
         return CompStmt(stmts)
 
-    def visit_expr_stmt(self, node, childs):
-        return childs[0]
-
     def visit_type(self, node, childs):
         return node.text
-
-    def visit_expression(self, node, childs):
-        return childs[0]
 
     def visit_binary_operation(self, node, childs):
         operation, lhs, rhs = (childs[i] for i in [2, 0, 4])
         return BinOp(operation, lhs, rhs)
 
-    def visit_single_expr(self, node, childs):
-        return childs[0]
-
     def visit_bin_op(self, node, childs):
         return node.text
-
-    def visit_paren_expr(self, node, childs):
-        return childs[2]
 
     def visit_unary_expr(self, node, childs):
         return UnaOp(*(childs[i] for i in [0, 2]))
 
     def visit_unop(self, node, childs):
         return node.text
-
-    def visit_literal(self, node, childs):
-        return childs[0]
 
     def visit_int_lit(self, node, childs):
         return Literal('int', int(node.text))
