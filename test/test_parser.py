@@ -164,6 +164,13 @@ class TestAST(unittest.TestCase):
         self.assertEqual(ast.expression.type, 'float')
         self.assertEqual(ast.expression.val, 1.0)
 
+        ast = parser.parse('float y = x;')
+        self.assertEqual(type(ast), parser.DeclStmt)
+        self.assertEqual(ast.type, 'float')
+        self.assertEqual(ast.variable, 'y')
+        self.assertEqual(type(ast.expression), parser.Variable)
+        self.assertEqual(ast.expression.name, 'x')
+
     def test_compound(self):
         ast = parser.parse("""{
             int x;

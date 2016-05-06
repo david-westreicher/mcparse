@@ -16,7 +16,7 @@ mcgrammar = Grammar(
     type             = "int" / "float"
     expression       = binary_operation / single_expr
     binary_operation = single_expr _ bin_op _ expression
-    single_expr      = paren_expr / unary_expr / literal / identifier
+    single_expr      = paren_expr / unary_expr / literal / variable
     bin_op           = "+" / "-" / "*" / "/" / "%" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
     paren_expr       = "(" _ expression _ ")"
     unary_expr       = unop _ expression
@@ -24,6 +24,7 @@ mcgrammar = Grammar(
     literal          = float_lit / int_lit
     int_lit          = ~"\d+"
     float_lit        = ~"\d+\.\d*"
+    variable         = ~"[a-zA-Z_][a-zA-Z_0-9]*" 
     identifier       = ~"[a-zA-Z_][a-zA-Z_0-9]*"
     _                = ~"\s*"
     """)
@@ -55,8 +56,8 @@ class ASTFormatter(NodeVisitor):
         return ForStmt(initexpr, conditionexpr, afterexp, stmt)
 
     def visit_decl_stmt(self, node, childs):
-        vartype, variable, expression = (childs[i] for i in [0, 2, 3])
-        return DeclStmt(vartype, variable.name, expression)
+        vartype, varname, expression = (childs[i] for i in [0, 2, 3])
+        return DeclStmt(vartype, varname, expression)
 
     def visit_compound_stmt(self, node, childs):
         stmts = childs[2]
@@ -88,8 +89,11 @@ class ASTFormatter(NodeVisitor):
     def visit_float_lit(self, node, childs):
         return Literal('float', float(node.text))
 
-    def visit_identifier(self, node, childs):
+    def visit_variable(self, node, childs):
         return Variable(node.text)
+
+    def visit_identifier(self, node, childs):
+        return node.text
 
     def visit__(self, node, childs):
         return None
