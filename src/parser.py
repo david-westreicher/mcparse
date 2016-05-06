@@ -135,19 +135,13 @@ class ASTFormatter(NodeVisitor):
     def visit_identifier(self, node, childs):
         return node.text
 
-    def visit__(self, node, childs):
-        return None
-
     def generic_visit(self, node, childs):
-        if node.expr_name == '' and len(childs) == 0:
-            return None
         res = [x for x in childs if x is not None]
         if len(res) == 0:
             return None
         if len(res) == 1:
             return res[0]
-        if len(res) > 1:
-            return res
+        return res
 
 
 def prettyast(ast, level=0, tostr=True):
