@@ -3,10 +3,15 @@ from parsimonious import Grammar, NodeVisitor
 
 # TODO expression precedence is not expressed: - (unary) > * > +
 # i.e.: -5.0*10.0 => (- (* 5 10))
+# TODO identifier should really be a variable in most cases
+# TODO maybe can ommit childs[0] visits?
 
 mcgrammar = Grammar(
     """
-    statement        = if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
+    statement        = fun_def / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
+    fun_def          = type_or_void _ identifier _ "(" _ params _ ")" _ compound_stmt
+    params           = param ( _ "," _ param )*
+    param            = type _ identifier
     if_stmt          = "if" _ paren_expr _ statement (_ "else" _ statement)?
     while_stmt       = "while" _ paren_expr _ statement
     for_stmt         = "for" _ "(" _ expression _ ";" _ expression _ ";" _ expression _ ")" _ statement
@@ -14,7 +19,10 @@ mcgrammar = Grammar(
     compound_stmt    = "{" _ (statement _)* "}"
     expr_stmt        = expression _ ";"
     type             = "int" / "float"
-    expression       = binary_operation / single_expr
+    type_or_void     = type / "void"
+    expression       = call_expr / binary_operation / single_expr
+    call_expr        = identifier _ "(" _ arguments _ ")"
+    arguments        = expression ( _ "," _ expression )*
     binary_operation = single_expr _ bin_op _ expression
     single_expr      = paren_expr / unary_expr / literal / identifier
     bin_op           = "+" / "-" / "*" / "/" / "%" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
@@ -28,11 +36,14 @@ mcgrammar = Grammar(
     _                = ~"\s*"
     """)
 
+FunDef = namedtuple('FunDef', ['ret_type', 'name', 'params', 'stmts'])
+Param = namedtuple('Param', ['type', 'name'])
 IfStmt = namedtuple('IfStmt', ['expression', 'if_stmt', 'else_stmt'])
 WhileStmt = namedtuple('WhileStmt', ['expression', 'stmt'])
 ForStmt = namedtuple('ForStmt', ['initexpr', 'conditionexpr', 'afterexpr', 'stmt'])
 DeclStmt = namedtuple('DeclStmt', ['type', 'variable', 'expression'])
 CompStmt = namedtuple('CompStmt', ['stmts'])
+FunCall = namedtuple('FunCall', ['name', 'args'])
 BinOp = namedtuple('BinOp', ['operation', 'lhs', 'rhs'])
 UnaOp = namedtuple('UnaOp', ['operation', 'expression'])
 Literal = namedtuple('Literal', ['type', 'val'])
@@ -42,8 +53,27 @@ Variable = namedtuple('Variable', ['name'])
 class ASTFormatter(NodeVisitor):
     grammar = mcgrammar
 
+    def rightrecursive_flatten(self, children):
+        head, tail = children
+        if tail is None:
+            return [head]
+        if isinstance(tail, list):
+            return [head] + tail
+        return children
+
     def visit_statement(self, node, childs):
         return childs[0]
+
+    def visit_fun_def(self, node, childs):
+        ret_type, name, params, stmts = (childs[i] for i in [0, 2, 6, 10])
+        return FunDef(ret_type, name.name, params, stmts)
+
+    def visit_params(self, node, childs):
+        return self.rightrecursive_flatten(childs)
+
+    def visit_param(self, node, childs):
+        paramtype, name = (childs[i] for i in [0, 2])
+        return Param(paramtype, name.name)
 
     def visit_if_stmt(self, node, childs):
         expression, if_stmt, else_stmt = (childs[i] for i in [2, 4, 5])
@@ -75,8 +105,18 @@ class ASTFormatter(NodeVisitor):
     def visit_type(self, node, childs):
         return node.text
 
+    def visit_type_or_void(self, node, childs):
+        return node.text
+
     def visit_expression(self, node, childs):
         return childs[0]
+
+    def visit_call_expr(self, node, childs):
+        name, args = (childs[i] for i in [0, 4])
+        return FunCall(name.name, args)
+
+    def visit_arguments(self, node, childs):
+        return self.rightrecursive_flatten(childs)
 
     def visit_binary_operation(self, node, childs):
         operation, lhs, rhs = (childs[i] for i in [2, 0, 4])
