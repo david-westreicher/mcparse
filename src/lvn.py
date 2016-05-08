@@ -1,76 +1,91 @@
 from .bb import printbbs
 
+op_uses_values = {
+        'push'     : [3],
+        'pop'      : [3],
+        'jumpfalse': [1],
+        'assign'   : [1],
+        'binop'    : [1,2],
+        'unop'     : [1],
+        }
+
+commutative_ops = ['+', '*', '==', '!=']
+
+def simplify_op(op, arg2 = None):
+    if op=='-' and arg2 is None:
+        return 'unop'
+    if op in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']:
+        return 'binop'
+    if op in  ['-', '!']:
+        return 'unop'
+    return op
 
 def localvaluenumbering(basicblock):
     values = {}
     for code in basicblock:
         op, arg1, arg2, res = code
-        if op in ['jump', 'label']:
-            continue
-        if op == 'jumpfalse':
-            code[1] = values[str(arg1)]
+        simple_op = simplify_op(op, arg2)
+        if simple_op not in op_uses_values:
             continue
 
-        valueargs = []
-        for arg in [arg1, arg2]:
+        # put constants into the map
+        for argpos in op_uses_values[simple_op]:
+            arg = code[argpos]
             if str(arg) not in values:
                 values[str(arg)] = arg
-            valueargs.append(values[str(arg)])
 
-        e = (op, valueargs[0], valueargs[1])
-        if op in ['+', '*', '==', '!=']:
-            if str(valueargs[0]) > str(valueargs[1]):
-                e = (op, valueargs[0], valueargs[1])
+        # replace used arguments with their map-value
+        valargs = []
+        for arg in op_uses_values[simple_op]:
+            valarg = values[str(code[arg])]
+            code[arg] = valarg
+            valargs.append(valarg)
+
+        newval = None
+        if simple_op in ['binop', 'unop']:
+            if op in commutative_ops:
+                valargs = sorted(valargs)
+            arghash = (op,) + tuple(valargs)
+
+            if arghash not in values:
+                values[arghash] = res
             else:
-                e = (op, valueargs[1], valueargs[0])
-        elif op == 'assign':
-            e = str(arg1)
-
-        if e not in values:
-            values[res] = res
-            values[e] = res
-            if op != 'assign':
-                code[1] = valueargs[0]
-                code[2] = valueargs[1]
-        else:
-            # for el in values:
-                # print(el,values[el])
-            # print('replace: [%s,%s,%s,%s] with %s' % (op,arg1,arg2,res,values[e]))
-            values[res] = values[e]
-            if op != 'assign':
+                newval = values[arghash]
                 code[0] = 'assign'
+                code[1] = newval
                 code[2] = None
-            code[1] = values[e]
+                code[3] = res
+        if simple_op in ['assign']:
+            newval = valargs[0]
+        if newval is not None:
+            values[res] = newval
 
+def removeunusedlines_block(bb):
+    usedtemps = set()
+    for code in bb:
+        op, _, arg2, _ = code
+        op = simplify_op(op, arg2)
+        if op not in op_uses_values:
+            continue
+        for argpos in op_uses_values[op]:
+            arg = code[argpos]
+            if type(arg) is str and arg.startswith('.t'):
+                usedtemps.add(arg)
+
+    unneccesarylines = []
+    for i, (op, _, _, res) in enumerate(bb):
+        if simplify_op(op) not in ['assign', 'binop', 'unop']:
+            continue
+        if res.startswith('.t') and res not in usedtemps:
+            unneccesarylines.append(i)
+    for i in reversed(unneccesarylines):
+        del bb[i]
+    return len(bb) == 0
 
 def removeunusedlines(bbs):
     unneccesaryblocks = []
     for blocknum, bb in enumerate(bbs):
-        usedtemps = []
-        for op, arg1, arg2, res in bb:
-            if op in ['jump', 'label']:
-                continue
-            for arg in [arg1, arg2]:
-                if arg is None:
-                    continue
-                if type(arg) is not str:
-                    continue
-                if not arg.startswith('.t'):
-                    continue
-                usedtemps.append(arg)
-
-        unneccesarylines = []
-        for i, (op, arg1, arg2, res) in enumerate(bb):
-            if op in ['jump', 'jumpfalse', 'label']:
-                continue
-            if not res.startswith('.t'):
-                continue
-            if res in usedtemps:
-                continue
-            unneccesarylines.append(i)
-        for i in reversed(unneccesarylines):
-            del bb[i]
-        if len(bb) == 0:
+        if removeunusedlines_block(bb):
             unneccesaryblocks.append(blocknum)
     for blocknum in reversed(unneccesaryblocks):
         del bbs[blocknum]

@@ -349,10 +349,10 @@ def prettythreestr(op, arg1, arg2, res):
             # return, end-fun
             return '{:.10s}'.format(op)
         if arg1 is None:
-            return '{:.10s}\t{:.6s}'.format(op, res)
+            return '{:.10s}\t{:.6s}'.format(op, str(res))
         else:
             # jumpfalse
-            return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, arg1, res)
+            return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, str(arg1), res)
     elif op == 'assign':
         return '{:.6s}\t:=\t{:.6s}'.format(res, str(arg1))
     elif arg2 is not None:
