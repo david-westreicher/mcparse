@@ -112,8 +112,30 @@ class Scope(object):
 
 
 def asttothree(ast, three=None, scope=None, result=None, verbose=0):
-    # TODO update DOC
     ''' converts an AST into a list of 3-addr.-codes
+        ['function' , None, None, name]
+            Starts a definition of function 'name'
+            ['function', None, None, 'foo'] ->  function    foo
+
+        ['call'     , None, None, name]
+            Call the function 'name'
+            ['call', None, None, 'foo']     ->  call        foo
+
+        ['push'     , None, None, var]
+            Pushes the value of 'var' onto the top of the stack
+            ['push', None, None, 'x']       ->  push        x
+
+        ['pop'      , None, None, var]
+            Pops the top of the stack into 'var'
+            ['pop', None, None, 'x']        ->  pop         x
+
+        ['end-fun'  , None, None, None]
+            Ends the definition of the current function
+            ['end-fun', None, None, 'foo']  ->  end-fun
+
+        ['return'   , None, None, None]
+            Ends the execution of the current function
+            ['return', None, None, None]    ->  return
 
         ['jump'     , None, None, result]
             Jump to label 'result'
@@ -142,6 +164,17 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             Assigns the result of the operation 'unnop' (of the value/register 'arg1')
             to the register 'result'
             ['-', 4, None, 'x']             ->  x   :=      -       4
+
+
+        Function calls are implemented as follows:
+            Suppose we have the function:
+                int foo(int x, int y){ ... return z;}
+            When we call 'int res = foo(4,5)':
+                * '4' and '5' get pushed onto the stack
+                * we jump into the definition of 'foo'
+                * 'foo' pops '4' and '5' from the stack
+                * 'foo' puts the value of 'z' on the stack
+                * we pop the stack and set 'res' to that value
     '''
 
     scope = Scope() if scope is None else scope
@@ -314,20 +347,20 @@ def prettythreestr(op, arg1, arg2, res):
     if op in ['function', 'return', 'end-fun', 'push', 'pop', 'call', 'label', 'jump', 'jumpfalse']:
         if res is None:
             # return, end-fun
-            return '{:10s}'.format(op)
+            return '{:.10s}'.format(op)
         if arg1 is None:
-            return '{:10s}\t{:6s}'.format(op, res)
+            return '{:.10s}\t{:.6s}'.format(op, res)
         else:
             # jumpfalse
-            return '{:10s}\t{:6s}\t{:6s}'.format(op, arg1, res)
+            return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, arg1, res)
     elif op == 'assign':
-        return '{:6s}\t:=\t{:6s}'.format(res, str(arg1))
+        return '{:.6s}\t:=\t{:.6s}'.format(res, str(arg1))
     elif arg2 is not None:
         # binary operation
-        return '{:6s}\t:=\t{:6s}\t{:s}\t{:6s}'.format(res, str(arg1), op, str(arg2))
+        return '{:.6s}\t:=\t{:.6s}\t{:s}\t{:.6s}'.format(res, str(arg1), op, str(arg2))
     else:
         # unary operation
-        return '{:6s}\t:=\t{:s}\t{:6s}'.format(res, op, str(arg1))
+        return '{:.6s}\t:=\t{:s}\t{:.6s}'.format(res, op, str(arg1))
 
 
 def printthree(three, nice=True):
