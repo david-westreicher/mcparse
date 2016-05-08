@@ -1,14 +1,13 @@
-from .three import printthree
+from .three import printthree, prettythreestr
 
 
 def threetobbs(threes, verbose=0):
     # find leaders by instruction line
     leaders = set([0])
-    for line, three in enumerate(threes):
-        op = three[0]
-        if op == 'label':
+    for line, (op, _, _, _) in enumerate(threes):
+        if op in ['label', 'function']:
             leaders.add(line)
-        if op in ['jump', 'jumpfalse']:
+        if op in ['jump', 'jumpfalse', 'end-fun']:
             leaders.add(line + 1)
 
     # generate basic blocks for every leader
@@ -28,9 +27,15 @@ def threetobbs(threes, verbose=0):
 
 
 def printbbs(bbs, nice=True):
+    indent = False
     for i, bb in enumerate(bbs):
         print((' Basic Block %i ' % i).center(40, '-'))
-        printthree(bb, nice)
+        if nice:
+            for op, arg1, arg2, res in bb:
+                print(('\t' if indent else '') + prettythreestr(op, arg1, arg2, res))
+                indent = not indent if op in ['function', 'end-fun'] else indent
+        else:
+            printthree(bb, nice)
         print('\n')
 
 if __name__ == '__main__':
