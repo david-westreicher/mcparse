@@ -1,10 +1,25 @@
+from collections import namedtuple
+from warnings import warn
 from .parser import parsefile, prettyast
-from .parser import IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, BinOp, UnaOp, Literal, Variable
-import warnings
+from .parser import FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
 
 
 class ScopeException(Exception):
     pass
+
+
+class ReturnException(Exception):
+    pass
+
+
+class CallException(Exception):
+    pass
+
+
+class FunctionDefinitionException(Exception):
+    pass
+
+FunctionSignature = namedtuple('FunctionSignature', ['name', 'returntype', 'params'])
 
 
 class Scope(object):
@@ -13,12 +28,63 @@ class Scope(object):
         self.varindex = 0
         self.labindex = 0
         self.scopestack = [set()]
+        self.function_sigs = []
 
     def open(self):
         self.scopestack.append(set())
 
     def close(self):
         del self.scopestack[-1]
+
+    def function_begin(self, name, returntype, params):
+        for fname, _, _ in reversed(self.function_sigs):
+            if fname == name:
+                raise FunctionDefinitionException('The function "%s" is already defined' % name)
+        paramnames = set()
+        for i, (_, pname) in enumerate(params):
+            if pname in paramnames:
+                raise FunctionDefinitionException(
+                    'The parameter "%s" is already defined in function "%s %s(%s, ...)"' %
+                    (pname, returntype, name, ', '.join(['%s %s' % (t, n) for t, n in params[:i]])))
+            paramnames.add(pname)
+        self.function_sigs.append(FunctionSignature(name, returntype, params))
+        self.open()
+
+    def function_end(self, three):
+        returntype = self.function_sigs[-1].returntype
+        lastop, _, _, _ = three[-1]
+        if lastop != 'return':
+            if returntype == 'void':
+                three.append(['return', None, None, None])
+            else:
+                raise ReturnException('The function should return a value of type [%s]' % returntype)
+        self.close()
+
+    def check_function_return(self, expression):
+        returntype = self.function_sigs[-1].returntype
+        if returntype == 'void':
+            if expression is not None:
+                raise ReturnException('The function should return a value of type [%s]' % returntype)
+        else:
+            if expression is not None:
+                # TODO returntype is 'int' or 'float -> type of expression should be appropiate
+                pass
+            else:
+                raise ReturnException('The function should return a value of type [%s]' % returntype)
+
+    def check_function_call(self, result, name, expressions):
+        for fname, rettype, fparams in reversed(self.function_sigs):
+            if name != fname:
+                continue
+            # TODO rettype is 'int' or 'float -> type of expression should be appropiate
+            if len(fparams) != len(expressions):
+                raise CallException('The function "%s" accepts %d parameters, but you only gave %d' %
+                                    (name, len(fparams), len(expressions)))
+            if rettype == 'void' and result is not None:
+                raise CallException('The function "%s" returns "void". Don\'t use the return value' %
+                                    (name))
+            return
+        raise CallException('The function "%s" is not defined' % name)
 
     def newtemp(self):
         varname = '.t' + str(self.varindex)
@@ -41,6 +107,7 @@ class Scope(object):
 
 
 def asttothree(ast, three=None, scope=None, result=None, verbose=0):
+    # TODO update DOC
     ''' converts an AST into a list of 3-addr.-codes
 
         ['jump'     , None, None, result]
@@ -74,6 +141,25 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
     scope = Scope() if scope is None else scope
     three = [] if three is None else three
+
+    if type(ast) == FunDef:
+        scope.function_begin(ast.name, ast.ret_type, ast.params)
+        three.append(['function', None, None, ast.name])
+        for paramtype, paramname in ast.params:
+            scope.add(paramname)
+            three.append(['pop', None, None, paramname])
+        asttothree(ast.stmts, three, scope)
+        # check if last statement is a return
+        scope.function_end(three)
+        three.append(['end-fun', None, None, None])
+
+    if type(ast) == RetStmt:
+        scope.check_function_return(ast.expression)
+        if ast.expression != None:
+            tmpvar = scope.newtemp()
+            asttothree(ast.expression, three, scope, tmpvar)
+            three.append(['push', None, None, tmpvar])
+        three.append(['return', None, None, None])
 
     if type(ast) == IfStmt:
         tmpvar = scope.newtemp()
@@ -163,6 +249,16 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             asttothree(stmt, three, scope)
         scope.close()
 
+    if type(ast) == FunCall:
+        scope.check_function_call(result, ast.name, ast.args)
+        for expression in ast.args:
+            tmpvar = scope.newtemp()
+            asttothree(expression, three, scope, tmpvar)
+            three.append(['push', None, None, tmpvar])
+        three.append(['call', None, None, ast.name])
+        if result is not None:
+            three.append(['pop', None, None, result])
+
     if type(ast) == BinOp:
         if ast.operation == '=' and type(ast.lhs) == Variable:
             # this is an assignment posing as a binop
@@ -210,24 +306,31 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
 
 def prettythreestr(op, arg1, arg2, res):
-    if op in ['assign']:
-        return "%s\t:=\t%s" % (res, arg1)
-    elif op in ['label', 'jump']:
-        return "%s\t\t%s" % (op, res)
-    elif op == 'jumpfalse':
-        return "%s\t\t%s\t%s" % ('jumpfalse', arg1, res)
+    if op in ['function', 'return', 'end-fun', 'push', 'pop', 'call', 'label', 'jump', 'jumpfalse']:
+        if res is None:
+            # return, end-fun
+            return '{:10s}'.format(op)
+        if arg1 is None:
+            return '{:10s}\t{:6s}'.format(op, res)
+        else:
+            # jumpfalse
+            return '{:10s}\t{:6s}\t{:6s}'.format(op, arg1, res)
+    elif op == 'assign':
+        return '{:6s}\t:=\t{:6s}'.format(res, str(arg1))
     elif arg2 is not None:
         # binary operation
-        return "%s\t:=\t%s\t%s\t%s" % (res, arg1, op, arg2)
+        return '{:6s}\t:=\t{:6s}\t{:s}\t{:6s}'.format(res, str(arg1), op, str(arg2))
     else:
         # unary operation
-        return "%s\t:=\t%s\t%s" % (res, op, arg1)
+        return '{:6s}\t:=\t{:s}\t{:6s}'.format(res, op, str(arg1))
 
 
 def printthree(three, nice=True):
     if nice:
+        indent = False
         for op, arg1, arg2, res in three:
-            print(prettythreestr(op, arg1, arg2, res))
+            print(('\t' if indent else '') + prettythreestr(op, arg1, arg2, res))
+            indent = not indent if op in ['function', 'end-fun'] else indent
     else:
         for row in three:
             print(''.join([' ' * 10 if el is None else str(el).ljust(10) for el in row]))

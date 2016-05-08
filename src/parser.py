@@ -8,10 +8,11 @@ from parsimonious import Grammar, NodeVisitor
 
 mcgrammar = Grammar(
     """
-    statement        = fun_def / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
-    fun_def          = type_or_void _ identifier _ "(" _ params _ ")" _ compound_stmt
+    statement        = fun_def / return_stmt / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
+    fun_def          = type_or_void _ identifier _ "(" _ params? _ ")" _ compound_stmt
     params           = param ( _ "," _ param )*
     param            = type _ identifier
+    return_stmt      = "return" _ ( expression _ )? ";"
     if_stmt          = "if" _ paren_expr _ statement (_ "else" _ statement)?
     while_stmt       = "while" _ paren_expr _ statement
     for_stmt         = "for" _ "(" _ expression _ ";" _ expression _ ";" _ expression _ ")" _ statement
@@ -21,7 +22,7 @@ mcgrammar = Grammar(
     type             = "int" / "float"
     type_or_void     = type / "void"
     expression       = call_expr / binary_operation / single_expr
-    call_expr        = identifier _ "(" _ arguments _ ")"
+    call_expr        = identifier _ "(" _ arguments? _ ")"
     arguments        = expression ( _ "," _ expression )*
     binary_operation = single_expr _ bin_op _ expression
     single_expr      = paren_expr / unary_expr / literal / variable
@@ -39,6 +40,7 @@ mcgrammar = Grammar(
 
 FunDef = namedtuple('FunDef', ['ret_type', 'name', 'params', 'stmts'])
 Param = namedtuple('Param', ['type', 'name'])
+RetStmt = namedtuple('RetStmt', ['expression'])
 IfStmt = namedtuple('IfStmt', ['expression', 'if_stmt', 'else_stmt'])
 WhileStmt = namedtuple('WhileStmt', ['expression', 'stmt'])
 ForStmt = namedtuple('ForStmt', ['initexpr', 'conditionexpr', 'afterexpr', 'stmt'])
@@ -64,6 +66,8 @@ class ASTFormatter(NodeVisitor):
 
     def visit_fun_def(self, node, childs):
         ret_type, name, params, stmts = (childs[i] for i in [0, 2, 6, 10])
+        if params is None:
+            params = []
         return FunDef(ret_type, name, params, stmts)
 
     def visit_params(self, node, childs):
@@ -72,6 +76,10 @@ class ASTFormatter(NodeVisitor):
     def visit_param(self, node, childs):
         paramtype, name = (childs[i] for i in [0, 2])
         return Param(paramtype, name)
+
+    def visit_return_stmt(self, node, childs):
+        expr = childs[2]
+        return RetStmt(expr)
 
     def visit_if_stmt(self, node, childs):
         expression, if_stmt, else_stmt = (childs[i] for i in [2, 4, 5])
@@ -105,6 +113,8 @@ class ASTFormatter(NodeVisitor):
 
     def visit_call_expr(self, node, childs):
         name, args = (childs[i] for i in [0, 4])
+        if args is None:
+            args = []
         return FunCall(name, args)
 
     def visit_arguments(self, node, childs):
