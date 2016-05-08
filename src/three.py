@@ -29,6 +29,7 @@ class Scope(object):
         self.labindex = 0
         self.scopestack = [set()]
         self.function_sigs = []
+        self.function_stack = []
 
     def open(self):
         self.scopestack.append(set())
@@ -37,6 +38,8 @@ class Scope(object):
         del self.scopestack[-1]
 
     def function_begin(self, name, returntype, params):
+        if len(self.function_stack) > 0:
+            raise FunctionDefinitionException('The function "%s" is defined in a function scope of "%s" (no nesting)' % (name, self.function_stack[-1]))
         for fname, _, _ in reversed(self.function_sigs):
             if fname == name:
                 raise FunctionDefinitionException('The function "%s" is already defined' % name)
@@ -48,6 +51,7 @@ class Scope(object):
                     (pname, returntype, name, ', '.join(['%s %s' % (t, n) for t, n in params[:i]])))
             paramnames.add(pname)
         self.function_sigs.append(FunctionSignature(name, returntype, params))
+        self.function_stack.append(name)
         self.open()
 
     def function_end(self, three):
@@ -58,6 +62,7 @@ class Scope(object):
                 three.append(['return', None, None, None])
             else:
                 raise ReturnException('The function should return a value of type [%s]' % returntype)
+        self.function_stack.pop()
         self.close()
 
     def check_function_return(self, expression):

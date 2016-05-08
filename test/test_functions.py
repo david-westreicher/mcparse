@@ -242,6 +242,19 @@ class TestAST(unittest.TestCase):
 
 class TestThreeExceptions(unittest.TestCase):
 
+    def test_fun_def_nested(self):
+        with self.assertRaises(three.FunctionDefinitionException) as e:
+            tac = codetothree("""{
+                void outerfun(){
+                    void innerfun(){
+                    }
+                }
+            }""")
+        msg = str(e.exception).lower()
+        self.assertIn('outerfun', msg)
+        self.assertIn('innerfun', msg)
+        self.assertIn('nesting', msg)
+
     def test_fun_def_double_param(self):
         with self.assertRaises(three.FunctionDefinitionException) as e:
             tac = codetothree("""{
@@ -358,7 +371,7 @@ class TestThree(unittest.TestCase):
         three = codetothree(
             """void fun1(){
         }""")
-        self.assertEqual(len(three),3)
+        self.assertEqual(len(three), 3)
         self.checkthree(three[0], ['function', None, None, 'fun1'])
         self.checkthree(three[1], ['return'])
         self.checkthree(three[2], ['end-fun', None, None, None])
@@ -368,7 +381,7 @@ class TestThree(unittest.TestCase):
             """void fun1(){
                 return;
         }""")
-        self.assertEqual(len(three),3)
+        self.assertEqual(len(three), 3)
         self.checkthree(three[0], ['function', None, None, 'fun1'])
         self.checkthree(three[1], ['return'])
         self.checkthree(three[2], ['end-fun', None, None, None])
