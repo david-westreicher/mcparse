@@ -361,7 +361,7 @@ class TestThree(unittest.TestCase):
         self.assertEqual(len(three),3)
         self.checkthree(three[0], ['function', None, None, 'fun1'])
         self.checkthree(three[1], ['return'])
-        self.checkthree(three[2], ['end-fun', None, None, 'fun1'])
+        self.checkthree(three[2], ['end-fun', None, None, None])
 
     def test_fun_def_return_void(self):
         three = codetothree(
@@ -371,7 +371,7 @@ class TestThree(unittest.TestCase):
         self.assertEqual(len(three),3)
         self.checkthree(three[0], ['function', None, None, 'fun1'])
         self.checkthree(three[1], ['return'])
-        self.checkthree(three[2], ['end-fun', None, None, 'fun1'])
+        self.checkthree(three[2], ['end-fun', None, None, None])
 
     def generate_params(self, paramlen):
         params = '' if paramlen == 0 else 'int x0'
@@ -398,7 +398,7 @@ class TestThree(unittest.TestCase):
             if rettype != 'void':
                 self.checkthree(three[-3], ['push'])
             self.checkthree(three[-2], ['return'])
-            self.checkthree(three[-1], ['end-fun', None, None, 'fun1'])
+            self.checkthree(three[-1], ['end-fun', None, None, None])
 
     def test_fun_def_params_multiple(self):
         for rettype1, paramlen1, rettype2, paramlen2 in product(
@@ -415,7 +415,7 @@ class TestThree(unittest.TestCase):
                     rettype2, self.generate_params(paramlen2), '' if rettype2 == 'void' else '0',
                     ))
 
-            lastlinefun1 = three.index(['end-fun', None, None, 'fun1'])
+            lastlinefun1 = three.index(['end-fun', None, None, None])
             for start, end, rettype, parlen, fname in [
                     (0, lastlinefun1, rettype1, paramlen1, 'fun1'),
                     (lastlinefun1 + 1, -1, rettype2, paramlen2, 'fun2')]:
@@ -425,7 +425,7 @@ class TestThree(unittest.TestCase):
                 if rettype != 'void':
                     self.checkthree(three[end - 2], ['push'])
                 self.checkthree(three[end - 1], ['return'])
-                self.checkthree(three[end], ['end-fun', None, None, fname])
+                self.checkthree(three[end], ['end-fun', None, None, None])
 
     def test_fun_call_simple(self):
         for rettype, paramlen in product(['float', 'int'], range(5)):
@@ -435,7 +435,7 @@ class TestThree(unittest.TestCase):
                 }
                 %s x = fun(%s);
             }""" % (rettype, self.generate_params(paramlen), rettype, self.generate_args(paramlen)))
-            afterfun = three.index(['end-fun', None, None, 'fun']) + 1
+            afterfun = three.index(['end-fun', None, None, None]) + 1
             for offset in range(paramlen):
                 self.checkthree(three[afterfun + offset * 2 + 1], ['push'])
             afterpushes = afterfun + paramlen * 2
