@@ -386,6 +386,22 @@ class TestThree(unittest.TestCase):
         self.checkthree(three[1], ['return'])
         self.checkthree(three[2], ['end-fun', None, None, None])
 
+    def test_fun_def_recursive(self):
+        three = codetothree(
+            """int fun1(){
+                return fun1();
+        }""")
+
+    def test_fun_def_mutual_recursive(self):
+        three = codetothree("""{
+            int fun1(){
+                return fun2();
+            }
+            int fun2(){
+                return fun1();
+            }
+        }""")
+
     def generate_params(self, paramlen):
         params = '' if paramlen == 0 else 'int x0'
         for varnum in range(1, paramlen):

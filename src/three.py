@@ -24,12 +24,13 @@ FunctionSignature = namedtuple('FunctionSignature', ['name', 'returntype', 'para
 
 class Scope(object):
 
-    def __init__(self):
+    def __init__(self, ast):
         self.varindex = 0
         self.labindex = 0
         self.scopestack = [set()]
         self.function_sigs = []
         self.function_stack = []
+        self.function_prepass(ast)
 
     def open(self):
         self.scopestack.append(set())
@@ -37,12 +38,21 @@ class Scope(object):
     def close(self):
         del self.scopestack[-1]
 
+    def function_prepass(self, ast):
+        if type(ast) == CompStmt:
+            for stmt in ast.stmts:
+                self.function_prepass(stmt)
+        if type(ast) == FunDef:
+            name, returntype, params = ast.name, ast.ret_type, ast.params
+            for fname, _, _ in self.function_sigs:
+                if fname == name:
+                    raise FunctionDefinitionException('The function "%s" is already defined' % name)
+            self.function_sigs.append(FunctionSignature(name, returntype, params))
+
     def function_begin(self, name, returntype, params):
+        # TODO should be fixed in the grammar
         if len(self.function_stack) > 0:
             raise FunctionDefinitionException('The function "%s" is defined in a function scope of "%s" (no nesting)' % (name, self.function_stack[-1]))
-        for fname, _, _ in reversed(self.function_sigs):
-            if fname == name:
-                raise FunctionDefinitionException('The function "%s" is already defined' % name)
         paramnames = set()
         for i, (_, pname) in enumerate(params):
             if pname in paramnames:
@@ -50,23 +60,23 @@ class Scope(object):
                     'The parameter "%s" is already defined in function "%s %s(%s, ...)"' %
                     (pname, returntype, name, ', '.join(['%s %s' % (t, n) for t, n in params[:i]])))
             paramnames.add(pname)
-        self.function_sigs.append(FunctionSignature(name, returntype, params))
-        self.function_stack.append(name)
+        self.function_stack.append(filter(lambda (fname, _, __): name == fname, self.function_sigs)[0])
         self.open()
 
     def function_end(self, three):
-        returntype = self.function_sigs[-1].returntype
+        returntype = self.function_stack[-1].returntype
         lastop, _, _, _ = three[-1]
         if lastop != 'return':
+            # TODO maybe all previous if/while/for clauses had an exhaustive return
             if returntype == 'void':
                 three.append(['return', None, None, None])
             else:
-                raise ReturnException('The function should return a value of type [%s]' % returntype)
+                raise ReturnException('The function %s should return a value of type [%s]' % (self.function_stack[-1], returntype))
         self.function_stack.pop()
         self.close()
 
     def check_function_return(self, expression):
-        returntype = self.function_sigs[-1].returntype
+        returntype = self.function_stack[-1].returntype
         if returntype == 'void':
             if expression is not None:
                 raise ReturnException('The function should return a value of type [%s]' % returntype)
@@ -78,7 +88,7 @@ class Scope(object):
                 raise ReturnException('The function should return a value of type [%s]' % returntype)
 
     def check_function_call(self, result, name, expressions):
-        for fname, rettype, fparams in reversed(self.function_sigs):
+        for fname, rettype, fparams in self.function_sigs:
             if name != fname:
                 continue
             # TODO rettype is 'int' or 'float -> type of expression should be appropiate
@@ -176,8 +186,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
                 * 'foo' puts the value of 'z' on the stack
                 * we pop the stack and set 'res' to that value
     '''
-
-    scope = Scope() if scope is None else scope
+    scope = Scope(ast) if scope is None else scope
     three = [] if three is None else three
 
     if type(ast) == FunDef:
