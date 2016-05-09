@@ -1,24 +1,26 @@
 from .bb import printbbs
 
 op_uses_values = {
-        'push'     : [3],
-        'pop'      : [3],
-        'jumpfalse': [1],
-        'assign'   : [1],
-        'binop'    : [1,2],
-        'unop'     : [1],
-        }
+    'push': [3],
+    'pop': [3],
+    'jumpfalse': [1],
+    'assign': [1],
+    'binop': [1, 2],
+    'unop': [1],
+}
 
 commutative_ops = ['+', '*', '==', '!=']
 
-def simplify_op(op, arg2 = None):
-    if op=='-' and arg2 is None:
+
+def simplify_op(op, arg2=None):
+    if op == '-' and arg2 is None:
         return 'unop'
     if op in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']:
         return 'binop'
-    if op in  ['-', '!']:
+    if op in ['-', '!']:
         return 'unop'
     return op
+
 
 def localvaluenumbering(basicblock):
     values = {}
@@ -44,7 +46,7 @@ def localvaluenumbering(basicblock):
         newval = None
         if simple_op in ['binop', 'unop']:
             if op in commutative_ops:
-                valargs = sorted(valargs)
+                valargs.sort(key=lambda x: str(x))
             arghash = (op,) + tuple(valargs)
 
             if arghash not in values:
@@ -59,6 +61,7 @@ def localvaluenumbering(basicblock):
             newval = valargs[0]
         if newval is not None:
             values[res] = newval
+
 
 def removeunusedlines_block(bb):
     usedtemps = set()
@@ -81,6 +84,7 @@ def removeunusedlines_block(bb):
     for i in reversed(unneccesarylines):
         del bb[i]
     return len(bb) == 0
+
 
 def removeunusedlines(bbs):
     unneccesaryblocks = []

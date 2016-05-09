@@ -60,10 +60,10 @@ class Scope(object):
                     'The parameter "%s" is already defined in function "%s %s(%s, ...)"' %
                     (pname, returntype, name, ', '.join(['%s %s' % (t, n) for t, n in params[:i]])))
             paramnames.add(pname)
-        funcswithname = filter(lambda (fname, _, __): name == fname, self.function_sigs)
-        if len(funcswithname) == 0:
+        funcswithname = next(filter(lambda funname: name == funname[0], self.function_sigs), None)
+        if funcswithname is None:
             raise CallException('The function "%s" should be defined in the top-level' % name)
-        self.function_stack.append(funcswithname[0])
+        self.function_stack.append(funcswithname)
         self.open()
 
     def function_end(self, three):
@@ -142,8 +142,8 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         binop       x           y           var         var := x * y
         unop        x                       var         var := -x
 
-            binop € ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
-            unop € ['-', '!']
+            binop in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
+            unop in ['-', '!']
 
         Function calls are implemented as follows:
             Suppose we have the function:
