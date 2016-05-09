@@ -1,17 +1,18 @@
-from .utils import isvar
+from .utils import isvar, op_uses_values, op_sets_result, simplify_op
 
 
 def liveness(bbs, cfg, verbose=0):
     uevars = {i: set() for i in range(len(bbs))}
     killed = {i: set() for i in range(len(bbs))}
     for i, block in enumerate(bbs):
-        for op, arg1, arg2, result in block:
-            if op in ['jump', 'label']:
+        for code in block:
+            op, arg1, arg2, result = code
+            op = simplify_op(op, arg2)
+            if op not in op_uses_values:
                 continue
-            uevars[i] |= set([arg for arg in [arg1, arg2] if isvar(arg)]) - killed[i]
-            if op == 'jumpfalse' or not isvar(result):
-                continue
-            killed[i].add(result)
+            uevars[i] |= set([code[arg] for arg in op_uses_values[op] if type(code[arg]) is str]) - killed[i]
+            if op in op_sets_result:
+                killed[i].add(result)
 
     def transform(b, livein):
         return uevars[b] | (livein - killed[b])
@@ -62,14 +63,12 @@ def worklist(bbs, cfg, initer, transform, backward=False):
 
 def printinout(bbs, inb, outb, backward):
     print('\n' + ' Live variable analysis '.center(40, '#'))
-    from .three import printthree
-    for i, block in enumerate(bbs):
+    from .bb import printbbsyield
+    for i, block in enumerate(printbbsyield(bbs)):
         if not backward:
             print('IN: {%s}' % ', '.join(inb[i]))
         else:
             print('OUT: {%s}' % ', '.join(outb[i]))
-        print('Basic Block #%i' % i)
-        printthree(block)
         if backward:
             print('IN: {%s}' % ', '.join(inb[i]))
         else:

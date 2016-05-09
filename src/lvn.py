@@ -1,15 +1,5 @@
 from .bb import printbbs
-from .utils import op_commutative, op_uses_values
-
-
-def simplify_op(op, arg2=None):
-    if op == '-' and arg2 is None:
-        return 'unop'
-    if op in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']:
-        return 'binop'
-    if op in ['-', '!']:
-        return 'unop'
-    return op
+from .utils import op_commutative, op_uses_values, simplify_op
 
 
 def localvaluenumbering(basicblock):

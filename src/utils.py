@@ -22,7 +22,24 @@ op_uses_values = {
     'unop': [1],
 }
 
+op_sets_result = [
+    'pop',
+    'assign',
+    'binop',
+    'unop',
+]
+
 op_commutative = ['+', '*', '==', '!=']
+
+
+def simplify_op(op, arg2=None):
+    if op == '-' and arg2 is None:
+        return 'unop'
+    if op in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']:
+        return 'binop'
+    if op in ['-', '!']:
+        return 'unop'
+    return op
 
 
 def isvar(arg):
