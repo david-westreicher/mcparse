@@ -1,3 +1,6 @@
+from collections import namedtuple
+
+Frame = namedtuple('Frame', ['start', 'mem', 'arg_to_mem'])
 opcode = [
     'assign',     # 00
     'jump',       # 01
@@ -15,6 +18,10 @@ opcode = [
     '%',          # 13
     'u-',         # 14
     '!',          # 15
+    'call',       # 16
+    'return',     # 17
+    'push',       # 18
+    'pop',        # 19
 ]
 
 
@@ -24,48 +31,81 @@ def bbs_to_bytecode(bbs):
 
     # remove label instructions but remember line number of labels
     label_to_line = {}
+    func_starter = []
     linestoremove = []
+    currentfun = None
+    mainstart = 0
     for linenum, (op, _, _, result) in enumerate(code):
-        if op != 'label':
-            continue
-        label_to_line[result] = linenum - len(linestoremove)
-        linestoremove.append(linenum)
+        currline = linenum - len(linestoremove)
+        if op == 'label':
+            label_to_line[result] = currline
+        if op == 'function':
+            currentfun = result
+            func_starter.append([result, currline])
+        if op == 'end-fun':
+            mainstart = currline
+            func_starter[-1].append(currline)
+        if op in ['label', 'function', 'end-fun']:
+            linestoremove.append(linenum)
     code = [instr for linenum, instr in enumerate(code) if linenum not in linestoremove]
+    func_starter.append(['_main_', mainstart, len(code)])
+    func_to_num = {name: i for i,(name,_,_) in enumerate(func_starter)}
+    '''
+    for num, line in enumerate(code):
+        print(str(num).rjust(3) + '\t' + str(line))
+    print(func_starter)
+    print(func_to_num)
+    print(label_to_line)
+    print(mainstart)
+    '''
 
-    mem = []
-    arg_to_mem = {}
+    frames = []
+    for func, start, end in func_starter:
+        mem = []
+        arg_to_mem = {}
 
-    def memloc(arg):
-        if arg is None:
-            return None
-        if arg in arg_to_mem:
-            return arg_to_mem[arg]
-        arg_to_mem[arg] = len(arg_to_mem)
-        if type(arg) is str:
-            if arg.startswith('default-'):
-                mem.append(0)
+        def memloc(arg):
+            if arg is None:
+                return None
+            if arg in arg_to_mem:
+                return arg_to_mem[arg]
+            arg_to_mem[arg] = len(arg_to_mem)
+            if type(arg) is str:
+                if arg.startswith('default-'):
+                    mem.append(0)
+                else:
+                    mem.append(None)
             else:
-                mem.append(None)
-        else:
-            mem.append(arg)
-        return arg_to_mem[arg]
+                mem.append(arg)
+            return arg_to_mem[arg]
 
-    # rewrite instructions with opcodes
-    # line number for jumps instead of labels
-    # memlocations instead of registernames
-    for i, (op, arg1, arg2, result) in enumerate(code):
-        if op == 'jump' or op == 'jumpfalse':
-            result = label_to_line[result]
-            arg1, arg2 = (memloc(el) for el in [arg1, arg2])
-        else:
-            arg1, arg2, result = (memloc(el) for el in [arg1, arg2, result])
-        if op == '-' and arg2 is None:
-            op = opcode.index('u-')
-        else:
-            op = opcode.index(op)
-        code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
+        # rewrite instructions with opcodes
+        # line number for jumps instead of labels
+        # memlocations instead of registernames
+        for j, (op, arg1, arg2, result) in enumerate(code[start:end]):
+            i = j+start
+            if op in ['jump','jumpfalse']:
+                result = label_to_line[result]
+                arg1, arg2 = (memloc(el) for el in [arg1, arg2])
+            elif op == 'call':
+                result = func_to_num[result]
+            else:
+                arg1, arg2, result = (memloc(el) for el in [arg1, arg2, result])
+            if op == '-' and arg2 is None:
+                op = opcode.index('u-')
+            else:
+                op = opcode.index(op)
+            code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
+        frames.append(Frame(start, mem, arg_to_mem))
+    '''
+    for frame in frames:
+        print(frame)
+    for num, line in enumerate(code):
+        print(str(num).rjust(3) + '\t' + str(line))
+    '''
 
-    return code, mem, arg_to_mem
+    return code, frames
+
 
 def generate_bytecode(bbs, bcfile, verbose=0):
     if len(bbs) == 0:
@@ -73,26 +113,35 @@ def generate_bytecode(bbs, bcfile, verbose=0):
     code, mem, arg_to_mem = bbs_to_bytecode(bbs)
     mem_to_arg = {k: v for v, k in arg_to_mem.items()}
 
-    with open(bcfile,'w') as f:
+    with open(bcfile, 'w') as f:
         f.write('%d %d\n' % (len(mem), len(code)))
         for i in range(len(mem)):
             name = str(mem_to_arg[i])
             val = 0 if mem[i] is None else mem[i]
-            f.write('%s %s\n' % (name,val))
+            f.write('%s %s\n' % (name, val))
         for op, arg1, arg2, result in code:
-            f.write(' '.join([str(-1 if el is None else el) for el in [op,arg1,arg2,result]])+'\n')
+            f.write(' '.join([str(-1 if el is None else el) for el in [op, arg1, arg2, result]]) + '\n')
 
 
 def run(bbs, verbose=0):
     if len(bbs) == 0:
         return {}
 
-    code, mem, arg_to_mem = bbs_to_bytecode(bbs)
+    # code, mem, arg_to_mem = bbs_to_bytecode(bbs)
+    code, frames = bbs_to_bytecode(bbs)
 
-    pc = 0
+
+    paramstack = []
+    framestack = []
+    nextframe = frames[-1]
+    framestack.append([el for el in nextframe.mem])
+    mem = framestack[-1]
+    arg_to_mem = nextframe.arg_to_mem
+    pc = nextframe.start
     end = len(code) - 1
     while pc <= end:
         op, arg1, arg2, result = code[pc]
+        # print(pc, paramstack, [(name,mem[i]) for name,i in arg_to_mem.items()])
         if op == 0:
             mem[result] = mem[arg1]
         elif op == 1:
@@ -128,9 +177,26 @@ def run(bbs, verbose=0):
             mem[result] = -mem[arg1]
         elif op == 15:
             mem[result] = not mem[arg1]
+        elif op == 16:
+            nextframe = frames[result]
+            framestack.append([el for el in nextframe.mem])
+            mem = framestack[-1]
+            arg_to_mem = nextframe.arg_to_mem
+            framestack.append(pc)
+            pc = nextframe.start
+            continue
+        elif op == 17:
+            pc = framestack.pop()+1
+            framestack.pop()
+            mem = framestack[-1]
+            continue
+        elif op == 18:
+            paramstack.append(mem[arg1])
+        elif op == 19:
+            mem[result] = paramstack.pop()
         pc += 1
 
-    vals = {arg: mem[mempos] for arg, mempos in arg_to_mem.items()
+    vals = {arg: mem[mempos] for arg, mempos in frames[-1].arg_to_mem.items()
             if type(arg) is str and not arg.startswith('.t')}
     if verbose > 0:
         print('\n' + ' VM result '.center(40, '#'))

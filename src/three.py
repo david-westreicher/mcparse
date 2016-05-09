@@ -134,9 +134,9 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         jumpfalse   var                     label       pc := (pc+1) if var else label
         label                               label
         function                            fname
-        call                                fname       pc := fp.push(fname)
+        call                                fname       fp.push(pc), pc := fname
         end-fun
-        return                                          pc := fp.pop()
+        return                                          pc := fp.pop() + 1
         push        var                                 stack.push(var)
         pop                                 var         var := stack.pop()
         assign      x                       var         var := x
