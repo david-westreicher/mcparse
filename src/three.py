@@ -60,7 +60,7 @@ class Scope(object):
                     'The parameter "%s" is already defined in function "%s %s(%s, ...)"' %
                     (pname, returntype, name, ', '.join(['%s %s' % (t, n) for t, n in params[:i]])))
             paramnames.add(pname)
-        funcswithname = next(filter(lambda funname: name == funname[0], self.function_sigs), None)
+        funcswithname = next(iter(filter(lambda funname: name == funname[0], self.function_sigs)), None)
         if funcswithname is None:
             raise CallException('The function "%s" should be defined in the top-level' % name)
         self.function_stack.append(funcswithname)
