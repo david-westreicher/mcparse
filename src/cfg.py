@@ -3,21 +3,19 @@ def bbstocfg(bbs, verbose=0, dotfile=None):
     labeltoblock = {}
     for i, bb in enumerate(bbs):
         for op, _, _, label in bb:
-            if op != 'label':
-                continue
-            labeltoblock[label] = i
+            if op == 'label':
+                labeltoblock[label] = i
 
     for i, bb in enumerate(bbs):
-        jumptonextblock = True
+        nextblock = i + 1
         for op, _, _, jumplabel in bb:
-            if op not in ['jump', 'jumpfalse']:
-                continue
-            cfg[i].add(labeltoblock[jumplabel])
+            if op in ['jump', 'jumpfalse']:
+                cfg[i].add(labeltoblock[jumplabel])
             if op == 'jump':
-                jumptonextblock = False
+                nextblock = -1
 
-        if jumptonextblock and i + 1 < len(bbs):
-            cfg[i].add(i + 1)
+        if op != 'end-fun' and nextblock > 0 and nextblock < len(bbs):
+            cfg[i].add(nextblock)
 
     if verbose > 0:
         print('\n' + ' Control Flow Graph '.center(40, '#'))
