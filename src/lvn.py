@@ -1,15 +1,5 @@
 from .bb import printbbs
-
-op_uses_values = {
-    'push': [3],
-    'pop': [3],
-    'jumpfalse': [1],
-    'assign': [1],
-    'binop': [1, 2],
-    'unop': [1],
-}
-
-commutative_ops = ['+', '*', '==', '!=']
+from .utils import op_commutative, op_uses_values
 
 
 def simplify_op(op, arg2=None):
@@ -45,7 +35,7 @@ def localvaluenumbering(basicblock):
 
         newval = None
         if simple_op in ['binop', 'unop']:
-            if op in commutative_ops:
+            if op in op_commutative:
                 valargs.sort(key=lambda x: str(x))
             arghash = (op,) + tuple(valargs)
 

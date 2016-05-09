@@ -26,17 +26,27 @@ def threetobbs(threes, verbose=0):
     return bbs
 
 
-def printbbs(bbs, nice=True):
+def printbbsyield(bbs):
     indent = False
     for i, bb in enumerate(bbs):
         print((' Basic Block %i ' % i).center(40, '-'))
-        if nice:
-            for op, arg1, arg2, res in bb:
-                print(('\t' if indent else '') + prettythreestr(op, arg1, arg2, res))
-                indent = not indent if op in ['function', 'end-fun'] else indent
-        else:
-            printthree(bb, nice)
+        for op, arg1, arg2, res in bb:
+            print(('\t' if indent else '') + prettythreestr(op, arg1, arg2, res))
+            indent = not indent if op in ['function', 'end-fun'] else indent
         print('\n')
+        yield bb
+
+
+def printbbs(bbs, nice=True):
+    indent = False
+    if nice:
+        for _ in printbbsyield(bbs):
+            pass
+    else:
+        for i, bb in enumerate(bbs):
+            print((' Basic Block %i ' % i).center(40, '-'))
+            printthree(bb, nice)
+            print('\n')
 
 if __name__ == '__main__':
     import argparse

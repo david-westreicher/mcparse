@@ -2,6 +2,7 @@ from collections import namedtuple
 from warnings import warn
 from .parser import parsefile, prettyast
 from .parser import FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
+from .utils import all_ops
 
 
 class ScopeException(Exception):
@@ -136,7 +137,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         call                                fname       pc := fp.push(fname)
         end-fun
         return                                          pc := fp.pop()
-        push                                var         stack.push(var)
+        push        var                                 stack.push(var)
         pop                                 var         var := stack.pop()
         assign      x                       var         var := x
         binop       x           y           var         var := x * y
@@ -174,7 +175,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         if ast.expression != None:
             tmpvar = scope.newtemp()
             asttothree(ast.expression, three, scope, tmpvar)
-            three.append(['push', None, None, tmpvar])
+            three.append(['push', tmpvar, None, None])
         three.append(['return', None, None, None])
 
     if type(ast) == IfStmt:
@@ -270,7 +271,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         for expression in ast.args:
             tmpvar = scope.newtemp()
             asttothree(expression, three, scope, tmpvar)
-            three.append(['push', None, None, tmpvar])
+            three.append(['push', tmpvar, None, None])
         three.append(['call', None, None, ast.name])
         if result is not None:
             three.append(['pop', None, None, result])
@@ -322,17 +323,19 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
 
 def prettythreestr(op, arg1, arg2, res):
-    if op in ['function', 'return', 'end-fun', 'push', 'pop', 'call', 'label', 'jump', 'jumpfalse']:
-        if res is None:
-            # return, end-fun
-            return '{:.10s}'.format(op)
-        if arg1 is None:
-            return '{:.10s}\t{:.6s}'.format(op, str(res))
-        else:
-            # jumpfalse
-            return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, str(arg1), res)
-    elif op == 'assign':
+    if op == 'assign':
         return '{:.6s}\t:=\t{:.6s}'.format(res, str(arg1))
+    elif op in all_ops:
+        if res is None:
+            # return, end-fun, push
+            if op in ['return', 'end-fun']:
+                return '{:.10s}'.format(op)
+            else:
+                return '{:.10s}\t{:.6s}'.format(op, str(arg1))
+        elif op == 'jumpfalse':
+            return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, str(arg1), res)
+        else:
+            return '{:.10s}\t{:.6s}'.format(op, str(res))
     elif arg2 is not None:
         # binary operation
         return '{:.6s}\t:=\t{:.6s}\t{:s}\t{:.6s}'.format(res, str(arg1), op, str(arg2))
