@@ -6,6 +6,8 @@ from src import parser
 from src import bb
 from src import cfg
 from src import dataflow
+from src import lvn
+from src import vm
 
 
 def codetothree(stringcode):
@@ -18,6 +20,16 @@ def codetobbs(stringcode):
 
 def codetocfg(stringcode):
     return cfg.bbstocfg(bb.threetobbs(three.asttothree(parser.parse(stringcode))))
+
+
+def executecode2(stringcode):
+    bbs = lvn.lvn(bb.threetobbs(three.asttothree(parser.parse(stringcode, verbose=1), verbose=1), verbose=1), verbose=1)
+    return vm.run(bbs)
+
+
+def executecode(stringcode):
+    bbs = lvn.lvn(bb.threetobbs(three.asttothree(parser.parse(stringcode))))
+    return vm.run(bbs)
 
 grammar = parser.mcgrammar
 
@@ -481,6 +493,65 @@ class TestThree(unittest.TestCase):
             }""" % (self.generate_params(paramlen), self.generate_args(paramlen)))
             self.checkthree(three[-1], ['call', None, None, 'fun'])
             # no pop, because we don't need the result
+
+
+class TestVM(unittest.TestCase):
+
+    def test_param_passing(self):
+        code = """{
+            int first(int x, int y){
+                return x;
+            }
+            int second(int x, int y){
+                return y;
+            }
+            int one = first(1,2);
+            int two = second(1,2);
+        }"""
+        vals = executecode(code)
+        self.assertEqual(vals['one'], 1)
+        self.assertEqual(vals['two'], 2)
+
+    def test_recursion_fib(self):
+        def fib(n):
+            if n <= 2:
+                return n
+            return fib(n - 1) + fib(n - 2)
+        for n in range(20):
+            code = """{
+                int fib(int n){
+                    if(n<=2)
+                        return n;
+                    return (fib(n-1))+fib(n-2);
+                }
+                int result = fib(%s);
+            }""" % n
+            vals = executecode(code)
+            self.assertEqual(vals['result'], fib(n))
+
+    def test_recursion_mutual(self):
+        for n in range(20):
+            code = """{
+                int is_even(int n){
+                    if (n==0)
+                        return 1;
+                    else
+                        return is_odd(n-1);
+                    return 1;
+                }
+                int is_odd(int n){
+                    if (n==0)
+                        return 0;
+                    else
+                        return is_even(n-1);
+                    return 0;
+                }
+                int result_even = is_even(%s);
+                int result_odd = is_odd(%s);
+            }""" % (n, n)
+            vals = executecode(code)
+            self.assertEqual(vals['result_even'], 1 if n % 2 == 0 else 0)
+            self.assertEqual(vals['result_odd'], 1 if n % 2 == 1 else 0)
 
 if __name__ == '__main__':
     unittest.main()

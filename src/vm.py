@@ -134,14 +134,15 @@ def run(bbs, verbose=0):
     paramstack = []
     framestack = []
     nextframe = frames[-1]
-    framestack.append([el for el in nextframe.mem])
-    mem = framestack[-1]
-    arg_to_mem = nextframe.arg_to_mem
     pc = nextframe.start
+    framestack.append([el for el in nextframe.mem])
+    framestack.append(pc)
+    mem = framestack[-2]
+    arg_to_mem = nextframe.arg_to_mem
     end = len(code) - 1
     while pc <= end:
         op, arg1, arg2, result = code[pc]
-        # print(pc, paramstack, [(name,mem[i]) for name,i in arg_to_mem.items()])
+        # print(pc, paramstack, [(name,mem[i]) for name,i in arg_to_mem.items()],framestack)
         if op == 0:
             mem[result] = mem[arg1]
         elif op == 1:
@@ -180,15 +181,15 @@ def run(bbs, verbose=0):
         elif op == 16:
             nextframe = frames[result]
             framestack.append([el for el in nextframe.mem])
-            mem = framestack[-1]
-            arg_to_mem = nextframe.arg_to_mem
             framestack.append(pc)
+            mem = framestack[-2]
+            arg_to_mem = nextframe.arg_to_mem
             pc = nextframe.start
             continue
         elif op == 17:
             pc = framestack.pop()+1
             framestack.pop()
-            mem = framestack[-1]
+            mem = framestack[-2]
             continue
         elif op == 18:
             paramstack.append(mem[arg1])

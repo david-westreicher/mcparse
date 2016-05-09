@@ -268,7 +268,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
 
     if type(ast) == FunCall:
         scope.check_function_call(result, ast.name, ast.args)
-        for expression in ast.args:
+        for expression in reversed(ast.args):
             tmpvar = scope.newtemp()
             asttothree(expression, three, scope, tmpvar)
             three.append(['push', tmpvar, None, None])
