@@ -15,7 +15,8 @@ mcgrammar = Grammar(
     return_stmt      = "return" _ ( expression _ )? ";"
     if_stmt          = "if" _ paren_expr _ statement (_ "else" _ statement)?
     while_stmt       = "while" _ paren_expr _ statement
-    for_stmt         = "for" _ "(" _ expression _ ";" _ expression _ ";" _ expression _ ")" _ statement
+    for_stmt         = "for" _ "(" _ decl_or_expr _  expression _ ";" _ expression _ ")" _ statement
+    decl_or_expr     = decl_stmt / expr_stmt
     decl_stmt        = type _ identifier (_ "=" _ expression)? _ ";"
     compound_stmt    = "{" _ (statement _)* "}"
     expr_stmt        = expression _ ";"
@@ -90,7 +91,7 @@ class ASTFormatter(NodeVisitor):
         return WhileStmt(expression, stmt)
 
     def visit_for_stmt(self, node, childs):
-        initexpr, conditionexpr, afterexp, stmt = (childs[i] for i in [4, 8, 12, 16])
+        initexpr, conditionexpr, afterexp, stmt = (childs[i] for i in [4, 6, 10, 14])
         return ForStmt(initexpr, conditionexpr, afterexp, stmt)
 
     def visit_decl_stmt(self, node, childs):

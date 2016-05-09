@@ -634,6 +634,29 @@ class TestFor(unittest.TestCase):
         self.assertEqual(vals['y'], 5)
 
 
+class TestSemantics(unittest.TestCase):
+    def test_nested_scope_same_var(self):
+        # https://projecteuler.net/problem=1
+        code = '''{
+            int xnested = 0;
+            int xnormal = 0;
+            {
+                int xnested = 1;
+                xnormal = 1;
+            }
+            int ynested = 0;
+            int ynormal = 0;
+            for(int i=0;i<10;i=i+1){
+                int ynested = 1;
+                ynormal = 1;
+            }
+        }'''
+        vals = executecode(code)
+        self.assertEqual(vals['xnormal'], 1)
+        self.assertEqual(vals['ynormal'], 1)
+        self.assertEqual(vals['xnested'], 0)
+        self.assertEqual(vals['ynested'], 0)
+
 class TestAlgorithms(unittest.TestCase):
 
     def test_minmax(self):

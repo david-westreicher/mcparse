@@ -60,7 +60,10 @@ class Scope(object):
                     'The parameter "%s" is already defined in function "%s %s(%s, ...)"' %
                     (pname, returntype, name, ', '.join(['%s %s' % (t, n) for t, n in params[:i]])))
             paramnames.add(pname)
-        self.function_stack.append(filter(lambda (fname, _, __): name == fname, self.function_sigs)[0])
+        funcswithname = filter(lambda (fname, _, __): name == fname, self.function_sigs)
+        if len(funcswithname) == 0:
+            raise CallException('The function "%s" should be defined in the top-level' % name)
+        self.function_stack.append(funcswithname[0])
         self.open()
 
     def function_end(self, three):
@@ -123,68 +126,34 @@ class Scope(object):
 
 def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     ''' converts an AST into a list of 3-addr.-codes
-        ['function' , None, None, name]
-            Starts a definition of function 'name'
-            ['function', None, None, 'foo'] ->  function    foo
 
-        ['call'     , None, None, name]
-            Call the function 'name'
-            ['call', None, None, 'foo']     ->  call        foo
+        Operation   Arg1        Arg2        Result      Effect
 
-        ['push'     , None, None, var]
-            Pushes the value of 'var' onto the top of the stack
-            ['push', None, None, 'x']       ->  push        x
+        jump                                label       pc := label
+        jumpfalse   var                     label       pc := (pc+1) if var else label
+        label                               label
+        function                            fname
+        call                                fname       pc := fp.push(fname)
+        end-fun
+        return                                          pc := fp.pop()
+        push                                var         stack.push(var)
+        pop                                 var         var := stack.pop()
+        assign      x                       var         var := x
+        binop       x           y           var         var := x * y
+        unop        x                       var         var := -x
 
-        ['pop'      , None, None, var]
-            Pops the top of the stack into 'var'
-            ['pop', None, None, 'x']        ->  pop         x
-
-        ['end-fun'  , None, None, None]
-            Ends the definition of the current function
-            ['end-fun', None, None, 'foo']  ->  end-fun
-
-        ['return'   , None, None, None]
-            Ends the execution of the current function
-            ['return', None, None, None]    ->  return
-
-        ['jump'     , None, None, result]
-            Jump to label 'result'
-            ['jump', None, None, 'L3']      ->  jump        L3
-
-        ['jumpfalse', arg1, None, result]
-            Jump to label 'result' if value/register 'arg1' equals to false
-            ['jumpfalse', 1, None, 'L2']    ->  jumpfalse   1   L2
-
-        ['label'    , None, None, result]
-            A label with the name 'result'
-            ['label', None, None, 'L1']     ->  label       L1
-
-        ['assign'   , arg1, None, result]
-            Assigns the value/register 'arg1' to the register 'result'
-            ['assign', 'y', None, 'x']      ->  x   :=      y
-
-        [binop      , arg1, arg2, result]
-            binop can be any of ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
-            Assigns the result of the operation 'binop' (of the value/register 'arg1'
-            and the value/register 'arg2') to the register 'result'
-            ['+', 4, t1, 'x']               ->  x   :=      4   +   t1
-
-        [unop       , arg1, None, result]
-            unop can be any of ['-', '!']
-            Assigns the result of the operation 'unnop' (of the value/register 'arg1')
-            to the register 'result'
-            ['-', 4, None, 'x']             ->  x   :=      -       4
-
+            binop € ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
+            unop € ['-', '!']
 
         Function calls are implemented as follows:
             Suppose we have the function:
                 int foo(int x, int y){ ... return z;}
             When we call 'int res = foo(4,5)':
-                * '4' and '5' get pushed onto the stack
-                * we jump into the definition of 'foo'
-                * 'foo' pops '4' and '5' from the stack
-                * 'foo' puts the value of 'z' on the stack
-                * we pop the stack and set 'res' to that value
+                * '4' and '5' get pushed onto the stack (push 4, push 5)
+                * we jump into the definition of 'foo' (call foo)
+                * 'foo' pops '4' and '5' from the stack (pop x, pop y)
+                * 'foo' puts the value of 'z' on the stack (push z)
+                * we pop the stack and set 'res' to that value (pop res)
     '''
     scope = Scope(ast) if scope is None else scope
     three = [] if three is None else three
