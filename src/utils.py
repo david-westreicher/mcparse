@@ -55,7 +55,7 @@ def isvar(arg):
     return True
 
 
-def function_ranges(bbs, asDic):
+def function_ranges(bbs, asDic = False):
     '''
     Generates the following array:
         [
