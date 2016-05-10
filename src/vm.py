@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-Frame = namedtuple('Frame', ['start', 'mem', 'arg_to_mem'])
+Frame = namedtuple('Frame', ['start', 'end', 'mem', 'arg_to_mem'])
 opcode = [
     'assign',     # 00
     'jump',       # 01
@@ -34,31 +34,35 @@ def bbs_to_bytecode(bbs):
     func_starter = []
     linestoremove = []
     currentfun = None
-    mainstart = 0
+    mainend = -1
     for linenum, (op, _, _, result) in enumerate(code):
         currline = linenum - len(linestoremove)
         if op == 'label':
             label_to_line[result] = currline
         if op == 'function':
+            if mainend < 0:
+                mainend = currline
             currentfun = result
             func_starter.append([result, currline])
         if op == 'end-fun':
-            mainstart = currline
             func_starter[-1].append(currline)
         if op in ['label', 'function', 'end-fun']:
             linestoremove.append(linenum)
     code = [instr for linenum, instr in enumerate(code) if linenum not in linestoremove]
-    func_starter.append(['_main_', mainstart, len(code)])
-    func_to_num = {name: i for i,(name,_,_) in enumerate(func_starter)}
+    if mainend<0:
+        mainend = len(code)
+    func_starter.append(['_global_', 0, mainend])
+    func_to_num = {name: i for i, (name, _, _) in enumerate(func_starter)}
     '''
     for num, line in enumerate(code):
         print(str(num).rjust(3) + '\t' + str(line))
     print(func_starter)
     print(func_to_num)
     print(label_to_line)
-    print(mainstart)
+    print(mainend)
     '''
 
+    # TODO what happens to global memory
     frames = []
     for func, start, end in func_starter:
         mem = []
@@ -83,8 +87,8 @@ def bbs_to_bytecode(bbs):
         # line number for jumps instead of labels
         # memlocations instead of registernames
         for j, (op, arg1, arg2, result) in enumerate(code[start:end]):
-            i = j+start
-            if op in ['jump','jumpfalse']:
+            i = j + start
+            if op in ['jump', 'jumpfalse']:
                 result = label_to_line[result]
                 arg1, arg2 = (memloc(el) for el in [arg1, arg2])
             elif op == 'call':
@@ -96,7 +100,7 @@ def bbs_to_bytecode(bbs):
             else:
                 op = opcode.index(op)
             code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
-        frames.append(Frame(start, mem, arg_to_mem))
+        frames.append(Frame(start, end-1, mem, arg_to_mem))
     '''
     for frame in frames:
         print(frame)
@@ -130,7 +134,6 @@ def run(bbs, verbose=0):
     # code, mem, arg_to_mem = bbs_to_bytecode(bbs)
     code, frames = bbs_to_bytecode(bbs)
 
-
     paramstack = []
     framestack = []
     nextframe = frames[-1]
@@ -139,8 +142,8 @@ def run(bbs, verbose=0):
     framestack.append(pc)
     mem = framestack[-2]
     arg_to_mem = nextframe.arg_to_mem
-    end = len(code) - 1
-    while pc <= end:
+    end = nextframe.end
+    while len(framestack)>2 or pc<=end:
         op, arg1, arg2, result = code[pc]
         # print(pc, paramstack, [(name,mem[i]) for name,i in arg_to_mem.items()],framestack)
         if op == 0:
@@ -187,7 +190,7 @@ def run(bbs, verbose=0):
             pc = nextframe.start
             continue
         elif op == 17:
-            pc = framestack.pop()+1
+            pc = framestack.pop() + 1
             framestack.pop()
             mem = framestack[-2]
             continue

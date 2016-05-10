@@ -471,28 +471,34 @@ class TestThree(unittest.TestCase):
     def test_fun_call_simple(self):
         for rettype, paramlen in product(['float', 'int'], range(5)):
             three = codetothree("""{
+                %s x = fun(%s);
                 %s fun(%s){
                     return 0;
                 }
-                %s x = fun(%s);
-            }""" % (rettype, self.generate_params(paramlen), rettype, self.generate_args(paramlen)))
+            }""" % (rettype, self.generate_args(paramlen), rettype, self.generate_params(paramlen)))
             afterfun = three.index(['end-fun', None, None, None]) + 1
-            for offset in range(paramlen):
-                self.checkthree(three[afterfun + offset * 2 + 1], ['push'])
-            afterpushes = afterfun + paramlen * 2
-            self.checkthree(three[afterpushes + 0], ['call', None, None, 'fun'])
-            self.checkthree(three[afterpushes + 1], ['pop'])
-            self.checkthree(three[afterpushes + 2], ['assign', None, None, 'x'])
+            for line in range(paramlen):
+                self.checkthree(three[line*2+0], ['assign'])
+                self.checkthree(three[line*2+1], ['push'])
+            self.checkthree(three[paramlen*2+0], ['call', None, None, 'fun'])
+            self.checkthree(three[paramlen*2+1], ['pop'])
+            self.checkthree(three[paramlen*2+2], ['assign', None, None, 'x'])
 
     def test_fun_call_void(self):
         for paramlen in range(5):
             three = codetothree("""{
+                fun(%s);
                 void fun(%s){
                 }
-                fun(%s);
-            }""" % (self.generate_params(paramlen), self.generate_args(paramlen)))
-            self.checkthree(three[-1], ['call', None, None, 'fun'])
-            # no pop, because we don't need the result
+            }""" % (self.generate_args(paramlen), self.generate_params(paramlen)))
+            afterCall = False
+            for op, _, _, result in three:
+                if op == 'call':
+                    afterCall = True
+                if op == 'pop':
+                    raise Exception('there should be # no pop, because we don\'t need the result')
+                if op == 'function':
+                    break
 
 
 class TestVM(unittest.TestCase):

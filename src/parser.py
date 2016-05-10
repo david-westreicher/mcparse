@@ -171,17 +171,17 @@ def prettyast(ast, level=0, tostr=True):
     return res
 
 
-def functionsfirst(ast):
+def functionslast(ast):
     import functools
     if type(ast) != CompStmt:
         return
 
-    def functionsfirst(x, y):
+    def functionslast(x, y):
         if type(x) == FunDef:
-            return 0 if type(y) == FunDef else -1
+            return 0 if type(y) == FunDef else 1
         else:
-            return 1 if type(y) == FunDef else 0
-    ast.stmts.sort(key=functools.cmp_to_key(functionsfirst))
+            return -1 if type(y) == FunDef else 0
+    ast.stmts.sort(key=functools.cmp_to_key(functionslast))
 
 
 def parse(stringcode, verbose=0):
@@ -190,7 +190,7 @@ def parse(stringcode, verbose=0):
         print('\n' + ' Parse Tree '.center(40, '#'))
         print(parsetree)
     ast = ASTFormatter().visit(parsetree)
-    functionsfirst(ast)
+    functionslast(ast)
     if verbose > 0:
         print('\n' + ' AST '.center(40, '#'))
         print(prettyast(ast))
