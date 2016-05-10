@@ -1,10 +1,13 @@
 def bbstocfg(bbs, verbose=0, dotfile=None):
     cfg = {i: set() for i in range(len(bbs))}
     labeltoblock = {}
+    funblocks = set()
     for i, bb in enumerate(bbs):
         for op, _, _, label in bb:
             if op == 'label':
                 labeltoblock[label] = i
+            if op == 'function':
+                funblocks.add(i)
 
     for i, bb in enumerate(bbs):
         nextblock = i + 1
@@ -14,7 +17,7 @@ def bbstocfg(bbs, verbose=0, dotfile=None):
             if op == 'jump':
                 nextblock = -1
 
-        if op != 'end-fun' and nextblock > 0 and nextblock < len(bbs):
+        if op != 'end-fun' and nextblock > 0 and nextblock < len(bbs) and nextblock not in funblocks:
             cfg[i].add(nextblock)
 
     if verbose > 0:

@@ -105,5 +105,36 @@ class TestCFG(unittest.TestCase):
         self.assertEqual(cfg[8], set([9]))
         self.assertEqual(cfg[9], set())
 
+
+class TestFunctions(unittest.TestCase):
+
+    def test_global_one_fun(self):
+        code = '''{
+            int x = init();
+            int init(){
+                return 0;
+            }
+        }'''
+        cfg = codetocfg(code)
+        # cfg should ignore function scopes
+        self.assertEqual(len(cfg), 2)
+        self.assertEqual(cfg, {0: set(), 1: set()})
+
+    def test_global_multi_fun(self):
+        code = '''{
+            int x = init();
+            int y = init2();
+            int init(){
+                return 0;
+            }
+            int init2(){
+                return 0;
+            }
+        }'''
+        cfg = codetocfg(code)
+        # cfg should ignore function scopes
+        self.assertEqual(len(cfg), 3)
+        self.assertEqual(cfg, {0: set(), 1: set(), 2: set()})
+
 if __name__ == '__main__':
     unittest.main()
