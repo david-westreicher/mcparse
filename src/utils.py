@@ -55,7 +55,7 @@ def isvar(arg):
     return True
 
 
-def function_ranges(bbs):
+def function_ranges(bbs, asDic):
     '''
     Generates the following array:
         [
@@ -74,7 +74,8 @@ def function_ranges(bbs):
             functions[currfunc] = [blocknum, blocknum + 1]
         else:
             functions[currfunc][1] = blocknum + 1
-    functions = sorted([(name, start, end) for name, (start, end) in functions.items()], key=lambda x: x[1])
+    if not asDic:
+        return sorted([(name, start, end) for name, (start, end) in functions.items()], key=lambda x: x[1])
     return functions
 
 
@@ -115,8 +116,7 @@ def makeDotFile(dotfile, bbs, ctrlflowgraph=None):
             dotnode += '%s -> %s;\n' % (num, child)
         return dotnode
 
-    fun_ranges = function_ranges(bbs)
-    fun_ranges = {name: (start, end) for name, start, end in fun_ranges}
+    fun_ranges = function_ranges(bbs, asDic=True)
     block_calls_fun = gen_block_calls_fun(bbs)
 
     with open(dotfile, 'w') as f:

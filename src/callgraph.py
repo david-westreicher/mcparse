@@ -3,9 +3,9 @@ from .utils import function_ranges
 
 def bbstocallgraph(bbs, verbose=0, dotfile=None):
     # create callgraph
-    fun_ranges = function_ranges(bbs)
-    callgraph = {name: set() for (name, _, _) in fun_ranges}
-    for currfun, start, end in fun_ranges:
+    fun_ranges = function_ranges(bbs, asDic=True)
+    callgraph = {name: set() for name in fun_ranges}
+    for currfun, (start, end) in fun_ranges.items():
         for bb in bbs[start:end]:
             for op, _, _, fname in bb:
                 if op == 'call':
