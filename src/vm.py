@@ -1,4 +1,5 @@
 from collections import namedtuple
+from .utils import function_ranges
 
 Frame = namedtuple('Frame', ['start', 'end', 'mem', 'arg_to_mem'])
 opcode = [
@@ -27,31 +28,20 @@ opcode = [
 
 def bbs_to_bytecode(bbs):
     # flatten basic blocks
-    code = [instr for bb in bbs for instr in bb]
-
-    # remove label instructions but remember line number of labels
-    label_to_line = {}
+    # remove label, function, end-fun instructions but remember line number of labels
+    code = []
+    fun_ranges = function_ranges(bbs)
     func_starter = []
-    linestoremove = []
-    currentfun = None
-    mainend = -1
-    for linenum, (op, _, _, result) in enumerate(code):
-        currline = linenum - len(linestoremove)
-        if op == 'label':
-            label_to_line[result] = currline
-        if op == 'function':
-            if mainend < 0:
-                mainend = currline
-            currentfun = result
-            func_starter.append([result, currline])
-        if op == 'end-fun':
-            func_starter[-1].append(currline)
-        if op in ['label', 'function', 'end-fun']:
-            linestoremove.append(linenum)
-    code = [instr for linenum, instr in enumerate(code) if linenum not in linestoremove]
-    if mainend < 0:
-        mainend = len(code)
-    func_starter.append(['_global_', 0, mainend])
+    label_to_line = {}
+    for fun, start, end in fun_ranges:
+        funstart = len(code)
+        for bb in bbs[start:end]:
+            for op, arg1, arg2, result in bb:
+                if op == 'label':
+                    label_to_line[result] = len(code)
+                if op not in ['label', 'function', 'end-fun']:
+                    code.append([op, arg1, arg2, result])
+        func_starter.append([fun, funstart, len(code)])
     func_to_num = {name: i for i, (name, _, _) in enumerate(func_starter)}
     '''
     for num, line in enumerate(code):
@@ -59,7 +49,6 @@ def bbs_to_bytecode(bbs):
     print(func_starter)
     print(func_to_num)
     print(label_to_line)
-    print(mainend)
     '''
 
     # TODO what happens to global memory
@@ -136,7 +125,7 @@ def run(bbs, verbose=0):
 
     paramstack = []
     framestack = []
-    nextframe = frames[-1]
+    nextframe = frames[0]
     pc = nextframe.start
     framestack.append([el for el in nextframe.mem])
     framestack.append(pc)
@@ -200,7 +189,7 @@ def run(bbs, verbose=0):
             mem[result] = paramstack.pop()
         pc += 1
 
-    vals = {arg: mem[mempos] for arg, mempos in frames[-1].arg_to_mem.items()
+    vals = {arg: mem[mempos] for arg, mempos in frames[0].arg_to_mem.items()
             if type(arg) is str and not arg.startswith('.t')}
     if verbose > 0:
         print('\n' + ' VM result '.center(40, '#'))

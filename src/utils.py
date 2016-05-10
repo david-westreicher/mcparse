@@ -57,12 +57,12 @@ def isvar(arg):
 
 def function_ranges(bbs):
     '''
-    Generates the following dictionary:
-        {
-            "fun1":         [0,  10],
-            "fun2":         [10, 20],
-            "__global__":   [20, 24]
-        }
+    Generates the following array:
+        [
+            ["__global__",  0,  5],
+            ["fun1",        5, 10],
+            ["fun2",       10, 20],
+        ]
     '''
     functions = {}
     currfunc = '__global__'
@@ -74,6 +74,7 @@ def function_ranges(bbs):
             functions[currfunc] = [blocknum, blocknum + 1]
         else:
             functions[currfunc][1] = blocknum + 1
+    functions = sorted([(name, start, end) for name, (start, end) in functions.items()], key=lambda x: x[1])
     return functions
 
 
@@ -115,6 +116,7 @@ def makeDotFile(dotfile, bbs, ctrlflowgraph=None):
         return dotnode
 
     fun_ranges = function_ranges(bbs)
+    fun_ranges = {name: (start, end) for name, start, end in fun_ranges}
     block_calls_fun = gen_block_calls_fun(bbs)
 
     with open(dotfile, 'w') as f:

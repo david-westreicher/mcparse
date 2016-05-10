@@ -1,3 +1,6 @@
+from .utils import makeDotFile
+
+
 def bbstocfg(bbs, verbose=0, dotfile=None):
     cfg = {i: set() for i in range(len(bbs))}
     labeltoblock = {}
@@ -26,34 +29,9 @@ def bbstocfg(bbs, verbose=0, dotfile=None):
             print(str(el) + '\t->\t' + ', '.join([str(el) for el in cfg[el]]))
 
     if dotfile is not None:
-        makeDotFile(bbs, cfg, dotfile)
+        makeDotFile(dotfile, bbs, cfg)
 
     return cfg
-
-
-def makeDotFile(bbs, cfg, dotfile):
-    import cgi
-    from .three import prettythreestr
-    with open(dotfile, 'w') as f:
-        f.write('digraph R {\n')
-        f.write('node [shape=plaintext]\n')
-        for i, bb in enumerate(bbs):
-            html = ['<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">']
-            for op, arg1, arg2, res in bb:
-                html.append('<TR>')
-                parts = cgi.escape(prettythreestr(op, arg1, arg2, res)).split('\t')
-                for part in parts:
-                    html.append('<TD>' + part + '</TD>')
-                for _ in range(5 - len(parts)):
-                    html.append('<TD></TD>')
-                html.append('</TR>')
-            html.append('</TABLE>>')
-            f.write(str(i) + ' [label=' + '\n'.join(html) + '];\n')
-        for el in cfg:
-            children = cfg[el]
-            for child in children:
-                f.write('%s -> %s;\n' % (el, child))
-        f.write('}')
 
 if __name__ == '__main__':
     import argparse
