@@ -478,11 +478,11 @@ class TestThree(unittest.TestCase):
             }""" % (rettype, self.generate_args(paramlen), rettype, self.generate_params(paramlen)))
             afterfun = three.index(['end-fun', None, None, None]) + 1
             for line in range(paramlen):
-                self.checkthree(three[line*2+0], ['assign'])
-                self.checkthree(three[line*2+1], ['push'])
-            self.checkthree(three[paramlen*2+0], ['call', None, None, 'fun'])
-            self.checkthree(three[paramlen*2+1], ['pop'])
-            self.checkthree(three[paramlen*2+2], ['assign', None, None, 'x'])
+                self.checkthree(three[line * 2 + 0], ['assign'])
+                self.checkthree(three[line * 2 + 1], ['push'])
+            self.checkthree(three[paramlen * 2 + 0], ['call', None, None, 'fun'])
+            self.checkthree(three[paramlen * 2 + 1], ['pop'])
+            self.checkthree(three[paramlen * 2 + 2], ['assign', None, None, 'x'])
 
     def test_fun_call_void(self):
         for paramlen in range(5):

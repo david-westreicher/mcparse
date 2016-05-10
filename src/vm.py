@@ -49,7 +49,7 @@ def bbs_to_bytecode(bbs):
         if op in ['label', 'function', 'end-fun']:
             linestoremove.append(linenum)
     code = [instr for linenum, instr in enumerate(code) if linenum not in linestoremove]
-    if mainend<0:
+    if mainend < 0:
         mainend = len(code)
     func_starter.append(['_global_', 0, mainend])
     func_to_num = {name: i for i, (name, _, _) in enumerate(func_starter)}
@@ -100,7 +100,7 @@ def bbs_to_bytecode(bbs):
             else:
                 op = opcode.index(op)
             code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
-        frames.append(Frame(start, end-1, mem, arg_to_mem))
+        frames.append(Frame(start, end - 1, mem, arg_to_mem))
     '''
     for frame in frames:
         print(frame)
@@ -143,7 +143,7 @@ def run(bbs, verbose=0):
     mem = framestack[-2]
     arg_to_mem = nextframe.arg_to_mem
     end = nextframe.end
-    while len(framestack)>2 or pc<=end:
+    while len(framestack) > 2 or pc <= end:
         op, arg1, arg2, result = code[pc]
         # print(pc, paramstack, [(name,mem[i]) for name,i in arg_to_mem.items()],framestack)
         if op == 0:
