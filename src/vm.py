@@ -26,30 +26,37 @@ opcode = [
 ]
 
 
-def bbs_to_bytecode(bbs):
-    # flatten basic blocks
-    # remove label, function, end-fun instructions but remember line number of labels
+def bbs_to_bytecode(bbs, verbose=0):
+    # preprocess by checking for __global__ and main interactions
+    functions = function_ranges(bbs, asDic=True)
+    if 'main' in functions:
+        if '__global__' in functions:  # global needs to call main in the end
+            _, endblock = functions['__global__']
+            bbs[endblock - 1].append(['call', None, None, 'main'])
+        else:  # need to create a new global which calls main
+            bbs.insert(0, [['call', None, None, 'main']])
+
+    # flatten basic blocks into code
+    # remove [label, function, end-fun] instructions but remember
+    #   * line number of labels
+    #   * range of each function (start - end line)
     code = []
     fun_ranges = function_ranges(bbs)
-    func_starter = []
+    func_starter = {}
     label_to_line = {}
     for fun, start, end in fun_ranges:
         funstart = len(code)
         for bb in bbs[start:end]:
-            for op, arg1, arg2, result in bb:
+            for tac in bb:
+                op, _, _, result = tac
                 if op == 'label':
                     label_to_line[result] = len(code)
                 if op not in ['label', 'function', 'end-fun']:
-                    code.append([op, arg1, arg2, result])
-        func_starter.append([fun, funstart, len(code)])
+                    code.append(tac)
+        func_starter[fun] = [funstart, len(code)]
+    exitline = func_starter['main' if 'main' in func_starter else '__global__'][1] - 1
+    func_starter = sorted([(name, start, end) for name, (start, end) in func_starter.items()], key=lambda x: x[1])
     func_to_num = {name: i for i, (name, _, _) in enumerate(func_starter)}
-    '''
-    for num, line in enumerate(code):
-        print(str(num).rjust(3) + '\t' + str(line))
-    print(func_starter)
-    print(func_to_num)
-    print(label_to_line)
-    '''
 
     # TODO what happens to global memory
     frames = []
@@ -90,14 +97,8 @@ def bbs_to_bytecode(bbs):
                 op = opcode.index(op)
             code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
         frames.append(Frame(start, end - 1, mem, arg_to_mem))
-    '''
-    for frame in frames:
-        print(frame)
-    for num, line in enumerate(code):
-        print(str(num).rjust(3) + '\t' + str(line))
-    '''
 
-    return code, frames
+    return code, frames, exitline
 
 
 def generate_bytecode(bbs, bcfile, verbose=0):
@@ -121,18 +122,15 @@ def run(bbs, verbose=0):
         return {}
 
     # code, mem, arg_to_mem = bbs_to_bytecode(bbs)
-    code, frames = bbs_to_bytecode(bbs)
+    code, frames, exitline = bbs_to_bytecode(bbs, verbose)
 
+    currframe = frames[0]
+    pc = currframe.start
+    mem = [el for el in currframe.mem]
     paramstack = []
-    framestack = []
-    nextframe = frames[0]
-    pc = nextframe.start
-    framestack.append([el for el in nextframe.mem])
-    framestack.append(pc)
-    mem = framestack[-2]
-    arg_to_mem = nextframe.arg_to_mem
-    end = nextframe.end
-    while len(framestack) > 2 or pc <= end:
+    framestack = [mem, (pc, currframe)]
+
+    while len(framestack) > 2 or pc <= exitline:
         op, arg1, arg2, result = code[pc]
         # print(pc, paramstack, [(name,mem[i]) for name,i in arg_to_mem.items()],framestack)
         if op == 0:
@@ -171,25 +169,24 @@ def run(bbs, verbose=0):
         elif op == 15:
             mem[result] = not mem[arg1]
         elif op == 16:
-            nextframe = frames[result]
-            framestack.append([el for el in nextframe.mem])
-            framestack.append(pc)
-            mem = framestack[-2]
-            arg_to_mem = nextframe.arg_to_mem
-            pc = nextframe.start
+            currframe = frames[result]
+            mem = [el for el in currframe.mem]
+            framestack.extend([mem, (pc, currframe)])
+            pc = currframe.start
             continue
         elif op == 17:
-            pc = framestack.pop() + 1
-            framestack.pop()
-            mem = framestack[-2]
-            continue
+            if pc == exitline:
+                break
+            _, (pc, _) = framestack[-2:]
+            del framestack[-2:]
+            mem, (_, currframe) = framestack[-2:]
         elif op == 18:
             paramstack.append(mem[arg1])
         elif op == 19:
             mem[result] = paramstack.pop()
         pc += 1
 
-    vals = {arg: mem[mempos] for arg, mempos in frames[0].arg_to_mem.items()
+    vals = {arg: mem[mempos] for arg, mempos in currframe.arg_to_mem.items()
             if type(arg) is str and not arg.startswith('.t')}
     if verbose > 0:
         print('\n' + ' VM result '.center(40, '#'))

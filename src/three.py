@@ -40,6 +40,7 @@ class Scope(object):
         del self.scopestack[-1]
 
     def function_prepass(self, ast):
+        # TODO check if __global__ or main is defined
         if type(ast) == CompStmt:
             for stmt in ast.stmts:
                 self.function_prepass(stmt)

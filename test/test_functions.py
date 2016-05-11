@@ -503,6 +503,47 @@ class TestThree(unittest.TestCase):
 
 class TestVM(unittest.TestCase):
 
+    def test_main_is_called(self):
+        code = """{
+            int y = 0;
+            void main(){
+                int x = 1337;
+            }
+        }"""
+        vals = executecode(code)
+        self.assertEqual(vals['x'], 1337)
+
+        code = """{
+            void main(){
+                int x = 1337;
+            }
+        }"""
+        vals = executecode(code)
+        self.assertEqual(vals['x'], 1337)
+
+        code = """{
+            void distr1(){
+            }
+            void main(){
+                int x = 1337;
+            }
+            void distr2(){
+            }
+        }"""
+        vals = executecode(code)
+        self.assertEqual(vals['x'], 1337)
+
+    def test_function_set_global(self):
+        code = """{
+            int globvar = 0;
+            setglobvar();
+            void setglobvar(){
+                globvar = 1337;
+            }
+        }"""
+        vals = executecode(code)
+        self.assertEqual(vals['globvar'], 1337)
+
     def test_param_passing(self):
         code = """{
             int first(int x, int y){
