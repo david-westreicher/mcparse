@@ -1,5 +1,5 @@
 from .bb import printbbs
-from .utils import op_commutative, op_uses_values, simplify_op
+from .utils import op_commutative, op_sets_result, op_uses_values, simplify_op
 
 
 def localvaluenumbering(basicblock):
@@ -57,7 +57,7 @@ def removeunusedlines_block(bb):
 
     unneccesarylines = []
     for i, (op, _, _, res) in enumerate(bb):
-        if simplify_op(op) not in ['assign', 'binop', 'unop']:
+        if simplify_op(op) not in op_sets_result:
             continue
         if res.startswith('.t') and res not in usedtemps:
             unneccesarylines.append(i)

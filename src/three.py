@@ -2,7 +2,7 @@ from collections import namedtuple
 from warnings import warn
 from .parser import parsefile, prettyast
 from .parser import FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
-from .utils import all_ops, bin_ops, un_ops
+from .utils import all_ops, bin_ops, un_ops, lib_sigs
 
 
 class ScopeException(Exception):
@@ -29,12 +29,7 @@ class Scope(object):
         self.varindex = 0
         self.labindex = 0
         self.scopestack = [set()]
-        self.function_sigs = [
-            FunctionSignature('read_int', 'int', []),
-            FunctionSignature('read_float', 'float', []),
-            FunctionSignature('print_int', 'void', [('int', 'x')]),
-            FunctionSignature('print_float', 'void', [('float', 'x')]),
-        ]
+        self.function_sigs = [FunctionSignature(name, rtype, params) for name, rtype, params in lib_sigs]
         self.function_stack = []
         self.function_prepass(ast)
 
@@ -57,7 +52,6 @@ class Scope(object):
             self.function_sigs.append(FunctionSignature(name, returntype, params))
 
     def function_begin(self, name, returntype, params):
-        # TODO should be fixed in the grammar
         if len(self.function_stack) > 0:
             raise FunctionDefinitionException('The function "%s" is defined in a function scope of "%s" (no nesting)' % (name, self.function_stack[-1]))
         paramnames = set()
@@ -78,25 +72,25 @@ class Scope(object):
         lastop, _, _, _ = three[-1]
         if lastop != 'return':
             # TODO maybe all previous if/while/for clauses had an exhaustive return
+            # could check easier in control flow graph
             if returntype == 'void':
                 three.append(['return', None, None, None])
             else:
-                raise ReturnException('The function %s should return a value of type [%s]' % (self.function_stack[-1], returntype))
+                raise ReturnException('The function "%s" should return a value of type [%s]' % (self.function_stack[-1], returntype))
         self.function_stack.pop()
         self.close()
 
     def check_function_return(self, expression):
         returntype = self.function_stack[-1].returntype
-        # TODO error messages should contain function names
         if returntype == 'void':
             if expression is not None:
-                raise ReturnException('The function should return a value of type [%s]' % returntype)
+                raise ReturnException('The function "%s" should return a value of type [%s]' % (self.function_stack[-1], returntype))
         else:
             if expression is not None:
                 # TODO returntype is 'int' or 'float -> type of expression should be appropiate
                 pass
             else:
-                raise ReturnException('The function should return a value of type [%s]' % returntype)
+                raise ReturnException('The function "%s" should return a value of type [%s]' % (self.function_stack[-1], returntype))
 
     def check_function_call(self, result, name, expressions):
         for fname, rettype, fparams in self.function_sigs:

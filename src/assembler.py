@@ -101,8 +101,8 @@ def fillblocks_with_normal(blocks):
 def gen_reg_mapping(code):
     currmap = {}
     for tac in code:
-        op, arg1, arg2, res = tac
-        op = simplify_op(op, arg2)
+        op, _, _, _ = tac
+        op = simplify_op(op)
         if op not in op_uses_values and op not in op_sets_result:
             continue
         for argpos in op_uses_values[op] + ([3]if op in op_sets_result else[]):
@@ -149,7 +149,7 @@ def fun_to_asm(code, assembly):
 
     def to_assembly_normal(tac):
         op, arg1, arg2, res = tac
-        sop = simplify_op(op, arg2)
+        sop = simplify_op(op)
 
         if op == 'jump':
             add('jmp', res)
@@ -286,9 +286,8 @@ def fun_to_asm(code, assembly):
                     to_assembly_return(stack_registers_needed)
 
 
-def bbstoassembly(bbs, verbose=0, assemblyfile=None):
+def codetoassembly(code, verbose=0, assemblyfile=None):
     assembly = ['.globl main', '.text']
-    code = [tac for bb in bbs for tac in bb]
     if verbose > 0:
         printcode(code)
     fun_ranges = function_ranges2(code)
@@ -328,6 +327,5 @@ if __name__ == '__main__':
         verbose=0 if args.lvn else args.verbose)
     if args.lvn:
         bbs = lvn(bbs, verbose=args.verbose)
-    # TODO convert bbs to code
-    assemblyfile = args.filename + '.s'
-    bbstoassembly(bbs, args.verbose + 1, assemblyfile)
+    code = [tac for bb in bbs for tac in bb]
+    codetoassembly(code, args.verbose + 1, args.filename + '.s')
