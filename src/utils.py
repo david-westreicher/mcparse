@@ -1,4 +1,3 @@
-
 all_ops = [
     'jump',
     'jumpfalse',
@@ -31,6 +30,7 @@ op_sets_result = [
 ]
 
 op_commutative = ['+', '*', '==', '!=']
+op_is_comp = ['==', '!=', '<=', '>=', '<', '>']
 
 
 def simplify_op(op, arg2=None):
@@ -41,6 +41,17 @@ def simplify_op(op, arg2=None):
     if op in ['-', '!']:
         return 'unop'
     return op
+
+
+def printcode(code):
+    from .three import prettythreestr
+    fun_ranges = function_ranges2(code)
+    for fun, start, end in fun_ranges:
+        for funline, tac in enumerate(code[start:end]):
+            op, _, _, _ = tac
+            linenum = str(funline + start).rjust(3)
+            indent = '' if fun == '__global__' or op == 'function' else '\t'
+            print(linenum + '\t' + indent + prettythreestr(*tac))
 
 
 def isvar(arg):
@@ -55,7 +66,8 @@ def isvar(arg):
     return True
 
 
-def function_ranges(bbs, asDic = False):
+# TODO function_ranges should only work on code, not basic blocks
+def function_ranges(bbs, asDic=False):
     '''
     Generates the following array:
         [
@@ -74,6 +86,21 @@ def function_ranges(bbs, asDic = False):
             functions[currfunc] = [blocknum, blocknum + 1]
         else:
             functions[currfunc][1] = blocknum + 1
+    if not asDic:
+        return sorted([(name, start, end) for name, (start, end) in functions.items()], key=lambda x: x[1])
+    return functions
+
+
+def function_ranges2(code, asDic=False):
+    functions = {}
+    currfunc = '__global__'
+    for codeline, (op, _, _, fname) in enumerate(code):
+        if op == 'function':
+            currfunc = fname
+        if currfunc not in functions:
+            functions[currfunc] = [codeline, codeline + 1]
+        else:
+            functions[currfunc][1] = codeline + 1
     if not asDic:
         return sorted([(name, start, end) for name, (start, end) in functions.items()], key=lambda x: x[1])
     return functions
@@ -135,3 +162,10 @@ def makeDotFile(dotfile, bbs, ctrlflowgraph=None):
             for fname in fnames:
                 f.write('%s -> %s;\n' % (block, fun_ranges[fname][0]))
         f.write('}')
+
+lib_sigs = [
+    ('read_int', 'int', []),
+    ('read_float', 'float', []),
+    ('print_int', 'void', [('int', 'x')]),
+    ('print_float', 'void', [('float', 'x')]),
+]

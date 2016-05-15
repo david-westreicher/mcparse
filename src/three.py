@@ -1,7 +1,7 @@
 from collections import namedtuple
 from warnings import warn
 from .parser import parsefile, prettyast
-from .parser import FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
+from .parser import FunDef, Param, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
 from .utils import all_ops
 
 
@@ -29,7 +29,12 @@ class Scope(object):
         self.varindex = 0
         self.labindex = 0
         self.scopestack = [set()]
-        self.function_sigs = []
+        self.function_sigs = [
+            FunctionSignature('read_int', 'int', []),
+            FunctionSignature('read_float', 'float', []),
+            FunctionSignature('print_int', 'void', [Param('int', 'x')]),
+            FunctionSignature('print_float', 'void', [Param('float', 'x')]),
+        ]
         self.function_stack = []
         self.function_prepass(ast)
 
@@ -82,6 +87,7 @@ class Scope(object):
 
     def check_function_return(self, expression):
         returntype = self.function_stack[-1].returntype
+        # TODO error messages should contain function names
         if returntype == 'void':
             if expression is not None:
                 raise ReturnException('The function should return a value of type [%s]' % returntype)
@@ -332,11 +338,11 @@ def prettythreestr(op, arg1, arg2, res):
             if op in ['return', 'end-fun']:
                 return '{:.10s}'.format(op)
             else:
-                return '{:.10s}\t{:.6s}'.format(op, str(arg1))
+                return '{:.10s}\t{:.10s}'.format(op, str(arg1))
         elif op == 'jumpfalse':
             return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, str(arg1), res)
         else:
-            return '{:.10s}\t{:.6s}'.format(op, str(res))
+            return '{:.10s}\t{:.10s}'.format(op, str(res))
     elif arg2 is not None:
         # binary operation
         return '{:.6s}\t:=\t{:.6s}\t{:s}\t{:.6s}'.format(res, str(arg1), op, str(arg2))
