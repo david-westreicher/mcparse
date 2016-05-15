@@ -3,8 +3,6 @@ from parsimonious import Grammar, NodeVisitor
 
 # TODO expression precedence is not expressed: - (unary) > * > +
 # i.e.: -5.0*10.0 => (- (* 5 10))
-# TODO identifier should really be a variable in most cases
-# TODO maybe can ommit childs[0] visits?
 
 mcgrammar = Grammar(
     """
@@ -40,7 +38,6 @@ mcgrammar = Grammar(
     """)
 
 FunDef = namedtuple('FunDef', ['ret_type', 'name', 'params', 'stmts'])
-Param = namedtuple('Param', ['type', 'name'])
 RetStmt = namedtuple('RetStmt', ['expression'])
 IfStmt = namedtuple('IfStmt', ['expression', 'if_stmt', 'else_stmt'])
 WhileStmt = namedtuple('WhileStmt', ['expression', 'stmt'])
@@ -76,7 +73,7 @@ class ASTFormatter(NodeVisitor):
 
     def visit_param(self, node, childs):
         paramtype, name = (childs[i] for i in [0, 2])
-        return Param(paramtype, name)
+        return (paramtype, name)
 
     def visit_return_stmt(self, node, childs):
         expr = childs[2]
@@ -132,7 +129,7 @@ class ASTFormatter(NodeVisitor):
         return UnaOp(*(childs[i] for i in [0, 2]))
 
     def visit_unop(self, node, childs):
-        return node.text
+        return 'u'+node.text
 
     def visit_int_lit(self, node, childs):
         return Literal('int', int(node.text))

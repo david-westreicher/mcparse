@@ -6,7 +6,7 @@ def localvaluenumbering(basicblock):
     values = {}
     for code in basicblock:
         op, arg1, arg2, res = code
-        simple_op = simplify_op(op, arg2)
+        simple_op = simplify_op(op)
         if simple_op not in op_uses_values:
             continue
 
@@ -46,8 +46,8 @@ def localvaluenumbering(basicblock):
 def removeunusedlines_block(bb):
     usedtemps = set()
     for code in bb:
-        op, _, arg2, _ = code
-        op = simplify_op(op, arg2)
+        op, _, _, _ = code
+        op = simplify_op(op)
         if op not in op_uses_values:
             continue
         for argpos in op_uses_values[op]:

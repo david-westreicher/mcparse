@@ -29,16 +29,16 @@ op_sets_result = [
     'unop',
 ]
 
+bin_ops =['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
 op_commutative = ['+', '*', '==', '!=']
 op_is_comp = ['==', '!=', '<=', '>=', '<', '>']
+un_ops = ['u-', 'u!']
 
 
-def simplify_op(op, arg2=None):
-    if op == '-' and arg2 is None:
-        return 'unop'
-    if op in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']:
+def simplify_op(op):
+    if op in bin_ops:
         return 'binop'
-    if op in ['-', '!']:
+    if op in un_ops:
         return 'unop'
     return op
 
