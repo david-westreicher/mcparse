@@ -2,21 +2,6 @@ from parsimonious import Grammar, NodeVisitor
 from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op, printcode, lib_sigs, op_is_comp
 
 
-op_to_asm = {
-    '+': 'add',
-    '-': 'sub',
-    '*': 'imul',
-    '/': 'idivl',
-    '%': 'idivl',
-    '==': 'sete',
-    '!=': 'setne',
-    '<=': 'setle',
-    '>=': 'setge',
-    '<': 'setl',
-    '>': 'setg',
-}
-
-
 class ASMInstruction:
 
     def __init__(self, op, arg1=None, arg2=None, comment=None, indent=True):
@@ -43,7 +28,49 @@ class ASMInstruction:
         return (self.op, self.arg1, self.arg2) == (other.op, other.arg1, other.arg2)
 
 
-# TODO fundef is unnecessary?
+'''
+TAC to Codeblocks
+-----------------
+
+We can't map TAC operations directly to ASM ops :(
+
+i.e.:     * a 'pop' could be used for parameter passing or
+            to retrieve the return value of a function call
+          * the same applies to the 'push'
+          * in ASM we need to surround a function call
+            (argument push, call, return) with the stack info
+
+To overcome this problem we use the parsimonious library to find
+blocks of code (each with a 'type' and 'start'/'end' lines)
+
+i.e.: Code:
+        int foo(int x, int y){
+            return bar(x+y);
+        }
+
+      TAC:
+        01  function    foo
+        02      pop     x
+        03      pop     y
+        04      z   :=  x   +   y
+        05      push     z
+        06      call     bar
+        07      pop     b
+        08      push     b
+        09      return
+
+      Blocks
+        [
+            ('fundef',  01, 04),
+            ('normal',  04, 05),
+            ('funcall', 05, 08),
+            ('return',  08, 10),
+        ]
+
+Each of these code blocks contains enough information for a conversion
+into a list of ASM instructions.
+'''
+
 tac_grammar = Grammar('''
     blocks  = block*
     block   = fundef / return / funcall
@@ -58,15 +85,6 @@ tac_grammar = Grammar('''
 
 class AssemblyHelper(NodeVisitor):
     grammar = tac_grammar
-
-    '''
-    def visit_blocks(self, node, childs):
-        return childs
-
-    def visit_op(self, node, childs):
-        return node.text
-
-    '''
 
     def visit_block(self, node, childs):
         return childs[0]
@@ -97,10 +115,6 @@ class AssemblyHelper(NodeVisitor):
         end = line if ret is None else max(line, ret)
         return ('funcall', start, end + 1)
 
-    def visit_otherop(self, node, childs):
-        line = childs[2]
-        return ('normal', line, line + 1)
-
     def visit_linenum(self, node, childs):
         return int(node.text)
 
@@ -109,10 +123,6 @@ class AssemblyHelper(NodeVisitor):
         if len(res) == 0:
             return None
         return res
-
-
-def is_var_or_temp(arg):
-    return type(arg) is str
 
 
 def fillblocks_with_normal(blocks):
@@ -125,7 +135,42 @@ def fillblocks_with_normal(blocks):
     assert(set(range(blocks[-1][2])) == set([el for _, start, end in blocks for el in range(start, end)]))
 
 
-def gen_reg_mapping(code):
+def gen_info_blocks(code):
+    grammarstring = []
+    for line, (op, _, _, _) in enumerate(code):
+        if op in ['function', 'pop', 'push', 'return', 'call']:
+            grammarstring.append(op + ':' + str(line) + ',')
+    grammarstring = ''.join(grammarstring)
+    parsetree = tac_grammar.parse(grammarstring)
+    blocks = AssemblyHelper().visit(parsetree)
+    fillblocks_with_normal(blocks)
+    return blocks
+
+'''
+Codeblocks to ASM
+-----------------
+'''
+
+op_to_asm = {
+    '+': 'add',
+    '-': 'sub',
+    '*': 'imul',
+    '/': 'idivl',
+    '%': 'idivl',
+    '==': 'sete',
+    '!=': 'setne',
+    '<=': 'setle',
+    '>=': 'setge',
+    '<': 'setl',
+    '>': 'setg',
+}
+
+
+def is_var_or_temp(arg):
+    return type(arg) is str
+
+
+def gen_stack_mapping(code, params):
     currmap = {}
     for tac in code:
         op, _, _, _ = tac
@@ -138,12 +183,15 @@ def gen_reg_mapping(code):
                 continue
             if arg in currmap:
                 continue
+            if arg in params:
+                continue
             currmap[arg] = len(currmap)
+    for param in params:
+        currmap[param] = len(currmap) + 1
     return currmap
 
 
 def fun_to_asm(code, assembly):
-    register_to_stack = gen_reg_mapping(code)
 
     def arg_to_asm(arg, offset=0):
         if is_var_or_temp(arg):
@@ -192,14 +240,14 @@ def fun_to_asm(code, assembly):
         elif op in ['*', '/', '%']:
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             add('mov', arg_to_asm(arg1), '%eax', comment=comment)
-            if op in ['/','%']:
+            if op in ['/', '%']:
                 add('cdq')
             if is_var_or_temp(arg2):
                 add(op_to_asm[op], arg_to_asm(arg2))
             else:
                 add('mov', arg_to_asm(arg2), '%ecx')
                 add(op_to_asm[op], '%ecx')
-            if op =='%':
+            if op == '%':
                 add('mov', '%edx', arg_to_asm(res))
             else:
                 add('mov', '%eax', arg_to_asm(res))
@@ -229,17 +277,12 @@ def fun_to_asm(code, assembly):
         else:
             raise NotImplementedError
 
-    def to_assembly_fundef(fun, stack_regs, param_num):
+    def to_assembly_fundef(fun, stack_regs):
         add(fun + ':', indent=False)
         add('sub', '$' + str(stack_regs * 4), '%esp',
-            comment='make space on stack for %d local registers (%d params already on stack)' % (stack_regs, param_num))
+            comment='make space on stack for %d local registers' % stack_regs)
         for locs, stacknum in register_to_stack.items():
             add(None, comment=locs.rjust(5) + ' := ' + str(stacknum * 4) + '(%esp)')
-        # move pushed arguments into local stack space
-        # TODO could use them directly
-        for i in range(param_num):
-            add('mov', '%d(%%esp)' % ((stack_regs + 1 + i) * 4), '%eax')
-            add('mov', '%eax', '%d(%%esp)' % (i * 4))
         add(None)
 
     def to_assembly_pop_eax(reg):
@@ -264,25 +307,23 @@ def fun_to_asm(code, assembly):
         add('add', '$' + str(stack_regs * 4), '%esp')
         add('ret')
 
-    grammarstring = []
-    for line, (op, _, _, _) in enumerate(code):
-        if op in ['function', 'pop', 'push', 'return', 'call']:
-            grammarstring.append(op + ':' + str(line) + ',')
-    grammarstring = ''.join(grammarstring)
-    parsetree = tac_grammar.parse(grammarstring)
-    blocks = AssemblyHelper().visit(parsetree)
-    fillblocks_with_normal(blocks)
-    # print(blocks)
+    blocks = gen_info_blocks(code)
+    register_to_stack, registersinframe = None, 0
+    for btype, start, end in blocks:
 
-    btype, fundefstart, fundefend = blocks[0]
-    assert(btype == 'fundef')
-    param_num = fundefend - fundefstart - 1
-    # the parameters of this function are already on the stack (TODO maybe reversed?)
-    # stack_registers_needed = len(register_to_stack) - param_num
-    stack_registers_needed = len(register_to_stack)
-    _, _, _, fname = code[0]
-    to_assembly_fundef(fname, stack_registers_needed, param_num)
-    for btype, start, end in blocks[1:]:
+        if btype == 'fundef':
+            # gather info about function
+            fname = None
+            params = []
+            for op, _, _, res in code[start:end]:
+                if op == 'function':
+                    fname = res
+                if op == 'pop':
+                    params.append(res)
+            register_to_stack = gen_stack_mapping(code, params)
+            add(None,comment='%d params already on stack' % len(params))
+            registersinframe = len(register_to_stack) - len(params)
+            to_assembly_fundef(fname, registersinframe)
 
         if btype == 'normal':
             for tac in code[start:end]:
@@ -317,13 +358,11 @@ def fun_to_asm(code, assembly):
                 if op == 'push':
                     to_assembly_push_eax(reg)
                 elif op == 'return':
-                    to_assembly_return(stack_registers_needed)
+                    to_assembly_return(registersinframe)
 
 
 def codetoassembly(code, verbose=0, assemblyfile=None):
     assembly = ['.globl main', '.text']
-    if verbose > 0:
-        printcode(code)
     fun_ranges = function_ranges2(code)
     for _, start, end in fun_ranges:
         fun_to_asm(code[start:end], assembly)
@@ -333,7 +372,7 @@ def codetoassembly(code, verbose=0, assemblyfile=None):
         print('\n'.join(map(str, assembly)))
 
     if assemblyfile is not None:
-        if verbose>-1:
+        if verbose > -1:
             print('Writing assembly to: \'%s\'' % assemblyfile)
         with open(assemblyfile, 'w') as f:
             f.write('\n'.join(map(str, assembly)))

@@ -22,7 +22,7 @@ class TestAssembler(unittest.TestCase):
     def evaluate(self, asm):
         vals = {'%esp': 0}
         valmapping = {}
-        line = 4
+        line = 5
         while asm[line].op is None and asm[line].comment is not None:
             var, stackstr = asm[line].comment.strip().split(':=')
             valmapping[stackstr.strip()] = var.strip()
@@ -92,10 +92,10 @@ class TestAssembler(unittest.TestCase):
             }''' % ('\n'.join(['int %s = %d;' % (name, val) for val, name in enumerate(vardefs)]))
             asm = codetoasm(code)
             self.assertEqual('.globl main', asm[0])
-            self.assertEqual('main:', asm[2].op)
+            self.assertEqual('main:', asm[3].op)
             # make space for n local registers
             n = len(vardefs)
-            self.assertEqual(ASMInstruction('sub', '$' + str(n * 4), '%esp'), asm[3])
+            self.assertEqual(ASMInstruction('sub', '$' + str(n * 4), '%esp'), asm[4])
             # reset stack pointer in the end
             self.assertEqual(ASMInstruction('add', '$' + str(n * 4), '%esp'), asm[-2])
 
