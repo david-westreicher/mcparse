@@ -154,7 +154,7 @@ def fun_to_asm(code, assembly):
         if op == 'jump':
             add('jmp', res)
         elif op == 'jumpfalse':
-            add('cmp', '$0', arg_to_asm(arg1), comment='if(' + str(arg1) + ') goto ' + res)
+            add('cmp', '$0', arg_to_asm(arg1), comment='if(' + str(arg1) + '==0) goto ' + res)
             add('je', res)
         elif op == 'label':
             add(res + ':', indent=False)
@@ -178,14 +178,15 @@ def fun_to_asm(code, assembly):
         elif sop == 'binop':
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             if op in op_is_comp:
-                add('movl', arg_to_asm(arg1), '%ebx', comment=comment)
-                add('movl', arg_to_asm(arg2), '%eax')
+                add('mov', arg_to_asm(arg1), '%ebx', comment=comment)
+                add('mov', arg_to_asm(arg2), '%eax')
                 add('movl', '$0', arg_to_asm(res))
                 add('cmp', '%eax', '%ebx')
                 add(op_to_asm[op], arg_to_asm(res))
             else:
-                expand_if_necc('movl', arg1, res, comment=comment)
-                expand_if_necc(op_to_asm[op], arg2, res)
+                add('mov', arg_to_asm(arg1), '%eax', comment=comment)
+                add(op_to_asm[op], arg_to_asm(arg2), '%eax')
+                add('mov', '%eax', arg_to_asm(res))
         elif sop == 'unop':
             # TODO
             assembly.append('normal ' + str(tac))
@@ -200,6 +201,8 @@ def fun_to_asm(code, assembly):
             comment='make space on stack for %d local registers (%d params already on stack)' % (stack_regs, param_num))
         for locs, stacknum in register_to_stack.items():
             add(None, comment=locs.rjust(5) + ' := ' + str(stacknum * 4) + '(%esp)')
+        # move pushed arguments into local stack space
+        # TODO could use them directly
         for i in range(param_num):
             add('mov', '%d(%%esp)' % ((stack_regs + 1 + i) * 4), '%eax')
             add('mov', '%eax', '%d(%%esp)' % (i * 4))
