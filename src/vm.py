@@ -18,7 +18,7 @@ opcode = [
     '/',          # 12
     '%',          # 13
     'u-',         # 14
-    '!',          # 15
+    'u!',         # 15
     'call',       # 16
     'return',     # 17
     'push',       # 18
@@ -91,10 +91,7 @@ def bbs_to_bytecode(bbs, verbose=0):
                 result = func_to_num[result]
             else:
                 arg1, arg2, result = (memloc(el) for el in [arg1, arg2, result])
-            if op == '-' and arg2 is None:
-                op = opcode.index('u-')
-            else:
-                op = opcode.index(op)
+            op = opcode.index(op)
             code[i][0], code[i][1], code[i][2], code[i][3] = op, arg1, arg2, result
         frames.append(Frame(start, end - 1, mem, arg_to_mem))
 

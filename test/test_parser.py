@@ -187,7 +187,7 @@ class TestAST(unittest.TestCase):
         self.checkComp(ast, parser.DeclStmt, parser.IfStmt, parser.Literal)
 
     def test_expression(self):
-        ast = parser.parse('(4*3)+(2-1);')
+        ast = parser.parse('(4*3)+((-2)-1);')
         self.assertEqual(type(ast), parser.BinOp)
         self.assertEqual(ast.operation, '+')
         self.assertEqual(type(ast.lhs), parser.BinOp)
@@ -196,7 +196,9 @@ class TestAST(unittest.TestCase):
         self.checkLiteral(ast.lhs.rhs, 'int', 3)
         self.assertEqual(type(ast.rhs), parser.BinOp)
         self.assertEqual(ast.rhs.operation, '-')
-        self.checkLiteral(ast.rhs.lhs, 'int', 2)
+        self.assertEqual(type(ast.rhs.lhs), parser.UnaOp)
+        self.assertEqual(ast.rhs.lhs.operation, 'u-')
+        self.checkLiteral(ast.rhs.lhs.expression, 'int', 2)
         self.checkLiteral(ast.rhs.rhs, 'int', 1)
 
     def test_dangling_else(self):

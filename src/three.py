@@ -2,7 +2,7 @@ from collections import namedtuple
 from warnings import warn
 from .parser import parsefile, prettyast
 from .parser import FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
-from .utils import all_ops
+from .utils import all_ops, bin_ops, un_ops
 
 
 class ScopeException(Exception):
@@ -145,7 +145,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         unop        x                       var         var := -x
 
             binop in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
-            unop in ['-', '!']
+            unop in ['u-', 'u!']
 
         Function calls are implemented as follows:
             Suppose we have the function:
@@ -337,12 +337,14 @@ def prettythreestr(op, arg1, arg2, res):
             return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, str(arg1), res)
         else:
             return '{:.10s}\t{:.6s}'.format(op, str(res))
-    elif arg2 is not None:
+    elif op in bin_ops:
         # binary operation
         return '{:.6s}\t:=\t{:.6s}\t{:s}\t{:.6s}'.format(res, str(arg1), op, str(arg2))
-    else:
+    elif op in un_ops:
         # unary operation
         return '{:.6s}\t:=\t{:s}\t{:.6s}'.format(res, op, str(arg1))
+    else:
+        raise NotImplementedError
 
 
 def printthree(three, nice=True):

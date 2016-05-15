@@ -7,7 +7,7 @@ def liveness(bbs, cfg, verbose=0):
     for i, block in enumerate(bbs):
         for code in block:
             op, arg1, arg2, result = code
-            op = simplify_op(op, arg2)
+            op = simplify_op(op)
             if op not in op_uses_values:
                 continue
             uevars[i] |= set([code[arg] for arg in op_uses_values[op] if type(code[arg]) is str]) - killed[i]
