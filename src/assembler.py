@@ -5,9 +5,9 @@ from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op
 op_to_asm = {
     '+': 'add',
     '-': 'sub',
-    '*': 'mull',
-    '/': 'div',
-    '%': 'div',
+    '*': 'imul',
+    '/': 'idivl',
+    '%': 'idivl',
     '==': 'sete',
     '!=': 'setne',
     '<=': 'setle',
@@ -15,6 +15,33 @@ op_to_asm = {
     '<': 'setl',
     '>': 'setg',
 }
+
+
+class ASMInstruction:
+
+    def __init__(self, op, arg1=None, arg2=None, comment=None, indent=True):
+        self.op = op
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.comment = comment
+        self.indent = indent
+
+    def __str__(self):
+        if self.op is None:
+            return '\t'.ljust(25) + ('' if self.comment is None else '\t# ' + self.comment)
+        indent = '\t' if self.indent else ''
+        instr = indent + self.op.ljust(5) + '\t' + ', '.join([el for el in [self.arg1, self.arg2] if el is not None])
+        instr = instr.ljust(25)
+        if self.comment is not None:
+            instr += '\t# ' + self.comment
+        return instr
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        return (self.op, self.arg1, self.arg2) == (other.op, other.arg1, other.arg2)
+
 
 # TODO fundef is unnecessary?
 tac_grammar = Grammar('''
@@ -126,21 +153,11 @@ def fun_to_asm(code, assembly):
             return '$%d' % arg
 
     def add(op, arg1=None, arg2=None, comment=None, indent=True):
-        if op is None:
-            assembly.append('\t'.ljust(25) + ('' if comment is None else '\t# ' + comment))
-            return
-        indent = '\t' if indent else ''
-        instr = indent + op.ljust(5) + '\t' + ', '.join([el for el in [arg1, arg2] if el is not None])
-        instr = instr.ljust(25)
-        if comment is not None:
-            instr += '\t# ' + comment
-        assembly.append(instr)
+        assembly.append(ASMInstruction(op, arg1, arg2, comment, indent))
 
-    def expand_if_necc(finalop, x, y, comment=None, sort=False):
+    def expand_if_necc(finalop, x, y, comment=None):
         need_accum = is_var_or_temp(x) and is_var_or_temp(y)
         x, y = [arg_to_asm(el) for el in [x, y]]
-        if sort:
-            x, y = sorted([x, y])
         if need_accum:
             add('mov', x, '%eax', comment=comment)
             add(finalop, '%eax', y)
@@ -172,9 +189,20 @@ def fun_to_asm(code, assembly):
             add('push', arg_to_asm(res))
         elif op == 'assign':
             expand_if_necc('movl', arg1, res, comment=res + ' := ' + str(arg1))
-        elif op == '*':
-            # TODO
-            add('imul', arg_to_asm(arg1), arg_to_asm(arg2), arg_to_asm(res))
+        elif op in ['*', '/', '%']:
+            comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
+            add('mov', arg_to_asm(arg1), '%eax', comment=comment)
+            if op in ['/','%']:
+                add('cdq')
+            if is_var_or_temp(arg2):
+                add(op_to_asm[op], arg_to_asm(arg2))
+            else:
+                add('mov', arg_to_asm(arg2), '%ecx')
+                add(op_to_asm[op], '%ecx')
+            if op =='%':
+                add('mov', '%edx', arg_to_asm(res))
+            else:
+                add('mov', '%eax', arg_to_asm(res))
         elif sop == 'binop':
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             if op in op_is_comp:
@@ -187,13 +215,19 @@ def fun_to_asm(code, assembly):
                 add('mov', arg_to_asm(arg1), '%eax', comment=comment)
                 add(op_to_asm[op], arg_to_asm(arg2), '%eax')
                 add('mov', '%eax', arg_to_asm(res))
-        elif sop == 'unop':
-            # TODO
-            assembly.append('normal ' + str(tac))
-        elif sop == 'unop':
-            assembly.append('normal ' + str(tac))
+        elif op == 'u-':
+            comment = res + ' = ' + op[1:] + str(arg1)
+            add('mov', '$0', '%eax', comment=comment)
+            add('sub', arg_to_asm(arg1), '%eax')
+            add('mov', '%eax', arg_to_asm(res))
+        elif op == 'u!':
+            comment = res + ' = ' + op[1:] + str(arg1)
+            add('mov', arg_to_asm(arg1), '%eax', comment=comment)
+            add('movl', '$0', arg_to_asm(res))
+            add('cmp', '$0', '%eax')
+            add('sete', arg_to_asm(res))
         else:
-            assembly.append('normal ' + str(tac))
+            raise NotImplementedError
 
     def to_assembly_fundef(fun, stack_regs, param_num):
         add(fun + ':', indent=False)
@@ -296,12 +330,13 @@ def codetoassembly(code, verbose=0, assemblyfile=None):
 
     if verbose > 0:
         print('\n' + ' GNU Assembly '.center(40, '#'))
-        print('\n'.join(assembly))
+        print('\n'.join(map(str, assembly)))
 
     if assemblyfile is not None:
-        print('Writing assembly to: \'%s\'' % assemblyfile)
+        if verbose>-1:
+            print('Writing assembly to: \'%s\'' % assemblyfile)
         with open(assemblyfile, 'w') as f:
-            f.write('\n'.join(assembly))
+            f.write('\n'.join(map(str, assembly)))
             f.write('\n')
 
     return assembly
