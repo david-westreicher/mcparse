@@ -148,8 +148,8 @@ class TestAST(unittest.TestCase):
             self.assertEqual(ast.name, name)
             self.assertEqual(ast.ret_type, rettype)
             self.assertEqual(ast.params, [
-                parser.Param(par1type, 'x'),
-                parser.Param(par2type, 'y')
+                (par1type, 'x'),
+                (par2type, 'y')
             ])
             self.checkComp(ast.stmts, parser.BinOp, parser.BinOp, parser.RetStmt)
             retstmt = ast.stmts.stmts[2]
@@ -196,24 +196,24 @@ class TestAST(unittest.TestCase):
         self.assertEqual(fun1.ret_type, 'void')
         self.assertEqual(fun1.name, 'fun1')
         self.assertEqual(fun1.params, [
-            parser.Param('int', 'x'),
+            ('int', 'x'),
         ])
         self.checkComp(fun1.stmts, parser.BinOp, parser.RetStmt)
 
         self.assertEqual(fun2.ret_type, 'int')
         self.assertEqual(fun2.name, 'fun2')
         self.assertEqual(fun2.params, [
-            parser.Param('int', 'x'),
-            parser.Param('float', 'y'),
+            ('int', 'x'),
+            ('float', 'y'),
         ])
         self.checkComp(fun2.stmts, parser.BinOp, parser.BinOp, parser.RetStmt)
 
         self.assertEqual(fun3.ret_type, 'float')
         self.assertEqual(fun3.name, 'fun3')
         self.assertEqual(fun3.params, [
-            parser.Param('int', 'x'),
-            parser.Param('float', 'y'),
-            parser.Param('int', 'z'),
+            ('int', 'x'),
+            ('float', 'y'),
+            ('int', 'z'),
         ])
         self.checkComp(fun3.stmts, parser.BinOp, parser.BinOp, parser.BinOp, parser.RetStmt)
 

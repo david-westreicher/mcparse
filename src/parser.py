@@ -38,7 +38,6 @@ mcgrammar = Grammar(
     """)
 
 FunDef = namedtuple('FunDef', ['ret_type', 'name', 'params', 'stmts'])
-Param = namedtuple('Param', ['type', 'name'])
 RetStmt = namedtuple('RetStmt', ['expression'])
 IfStmt = namedtuple('IfStmt', ['expression', 'if_stmt', 'else_stmt'])
 WhileStmt = namedtuple('WhileStmt', ['expression', 'stmt'])
@@ -74,7 +73,7 @@ class ASTFormatter(NodeVisitor):
 
     def visit_param(self, node, childs):
         paramtype, name = (childs[i] for i in [0, 2])
-        return Param(paramtype, name)
+        return (paramtype, name)
 
     def visit_return_stmt(self, node, childs):
         expr = childs[2]
