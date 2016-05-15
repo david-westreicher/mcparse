@@ -152,7 +152,7 @@ class ASTFormatter(NodeVisitor):
         return res
 
 
-def prettyast(ast, level=0, tostr=True):
+def prettyast(ast, level=0, tostr=True): # pragma: no cover
     res = []
     if isinstance(ast, list):
         for el in ast:
@@ -183,12 +183,12 @@ def functionslast(ast):
 
 def parse(stringcode, verbose=0):
     parsetree = mcgrammar.parse(stringcode)
-    if verbose > 1:
+    if verbose > 1: # pragma: no cover
         print('\n' + ' Parse Tree '.center(40, '#'))
         print(parsetree)
     ast = ASTFormatter().visit(parsetree)
     functionslast(ast)
-    if verbose > 0:
+    if verbose > 0: # pragma: no cover
         print('\n' + ' AST '.center(40, '#'))
         print(prettyast(ast))
     return ast

@@ -1,4 +1,6 @@
+.coverage
 *.pyc
 *.pdf
 examples/*.s
 examples/*.bin
+htmlcov/

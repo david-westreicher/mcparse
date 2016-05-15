@@ -20,13 +20,13 @@ def threetobbs(threes, verbose=0):
         currentblock.append(three)
     bbs.append(currentblock)
 
-    if verbose > 0:
+    if verbose > 0: # pragma: no cover
         print('\n' + ' Basic Blocks '.center(40, '#'))
         printbbs(bbs)
     return bbs
 
 
-def printbbsyield(bbs):
+def printbbsyield(bbs): # pragma: no cover
     indent = False
     for i, bb in enumerate(bbs):
         print((' Basic Block %i ' % i).center(40, '-'))
@@ -37,7 +37,7 @@ def printbbsyield(bbs):
         yield bb
 
 
-def printbbs(bbs, nice=True):
+def printbbs(bbs, nice=True): # pragma: no cover
     indent = False
     if nice:
         for _ in printbbsyield(bbs):

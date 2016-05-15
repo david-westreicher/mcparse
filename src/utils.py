@@ -43,7 +43,7 @@ def simplify_op(op):
     return op
 
 
-def printcode(code):
+def printcode(code): # pragma: no cover
     from .three import prettythreestr
     fun_ranges = function_ranges2(code)
     for fun, start, end in fun_ranges:
@@ -106,7 +106,7 @@ def function_ranges2(code, asDic=False):
     return functions
 
 
-def makeDotFile(dotfile, bbs, ctrlflowgraph=None):
+def makeDotFile(dotfile, bbs, ctrlflowgraph=None): # pragma: no cover
     if ctrlflowgraph is None:
         from .cfg import bbstocfg
         ctrlflowgraph = bbstocfg(bbs, verbose=1)

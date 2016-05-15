@@ -367,11 +367,11 @@ def codetoassembly(code, verbose=0, assemblyfile=None):
     for _, start, end in fun_ranges:
         fun_to_asm(code[start:end], assembly)
 
-    if verbose > 0:
+    if verbose > 0: # pragma: no cover
         print('\n' + ' GNU Assembly '.center(40, '#'))
         print('\n'.join(map(str, assembly)))
 
-    if assemblyfile is not None:
+    if assemblyfile is not None: # pragma: no cover
         if verbose > -1:
             print('Writing assembly to: \'%s\'' % assemblyfile)
         with open(assemblyfile, 'w') as f:

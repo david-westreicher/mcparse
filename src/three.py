@@ -323,7 +323,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     return three
 
 
-def prettythreestr(op, arg1, arg2, res):
+def prettythreestr(op, arg1, arg2, res): # pragma: no cover
     if op == 'assign':
         return '{:.6s}\t:=\t{:.6s}'.format(res, str(arg1))
     elif op in all_ops:
@@ -347,7 +347,7 @@ def prettythreestr(op, arg1, arg2, res):
         raise NotImplementedError
 
 
-def printthree(three, nice=True):
+def printthree(three, nice=True): # pragma: no cover
     if nice:
         indent = False
         for op, arg1, arg2, res in three:

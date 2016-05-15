@@ -80,7 +80,7 @@ def lvn(bbs, verbose=0):
         localvaluenumbering(bb)
         # cleanup
     removeunusedlines(bbs)
-    if verbose > 0:
+    if verbose > 0: # pragma: no cover
         print('\n' + ' Local Value Numbering '.center(40, '#'))
         printbbs(bbs)
     return bbs

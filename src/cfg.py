@@ -23,12 +23,12 @@ def bbstocfg(bbs, verbose=0, dotfile=None):
         if op != 'end-fun' and nextblock > 0 and nextblock < len(bbs) and nextblock not in funblocks:
             cfg[i].add(nextblock)
 
-    if verbose > 0:
+    if verbose > 0: # pragma: no cover
         print('\n' + ' Control Flow Graph '.center(40, '#'))
         for el in cfg:
             print(str(el) + '\t->\t' + ', '.join([str(el) for el in cfg[el]]))
 
-    if dotfile is not None:
+    if dotfile is not None: # pragma: no cover
         makeDotFile(dotfile, bbs, cfg)
 
     return cfg
