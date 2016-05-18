@@ -1,5 +1,4 @@
-from parsimonious import Grammar, NodeVisitor
-from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op, printcode, lib_sigs, op_is_comp
+from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op, op_is_comp, bin_ops
 
 
 class ASMInstruction:
@@ -26,130 +25,6 @@ class ASMInstruction:
 
     def __eq__(self, other):
         return (self.op, self.arg1, self.arg2) == (other.op, other.arg1, other.arg2)
-
-
-'''
-TAC to Codeblocks
------------------
-
-We can't map TAC operations directly to ASM ops :(
-
-i.e.:     * a 'pop' could be used for parameter passing or
-            to retrieve the return value of a function call
-          * the same applies to the 'push'
-          * in ASM we need to surround a function call
-            (argument push, call, return) with the stack info
-
-To overcome this problem we use the parsimonious library to find
-blocks of code (each with a 'type' and 'start'/'end' lines)
-
-i.e.: Code:
-        int foo(int x, int y){
-            return bar(x+y);
-        }
-
-      TAC:
-        01  function    foo
-        02      pop     x
-        03      pop     y
-        04      z   :=  x   +   y
-        05      push     z
-        06      call     bar
-        07      pop     b
-        08      push     b
-        09      return
-
-      Blocks
-        [
-            ('fundef',  01, 04),
-            ('normal',  04, 05),
-            ('funcall', 05, 08),
-            ('return',  08, 10),
-        ]
-
-Each of these code blocks contains enough information for a conversion
-into a list of ASM instructions.
-'''
-
-tac_grammar = Grammar('''
-    blocks  = block*
-    block   = fundef / return / funcall
-    fundef = "function:" linenum "," args*
-    args    = "pop:" linenum ","
-    return  = ("push:" linenum ",")? "return:" linenum ","
-    params  = "push:" linenum ","
-    funcall = params* "call:" linenum "," ("pop:" linenum ",")?
-    linenum = ~"\d+"
-''')
-
-
-class AssemblyHelper(NodeVisitor):
-    grammar = tac_grammar
-
-    def visit_block(self, node, childs):
-        return childs[0]
-
-    def visit_fundef(self, node, childs):
-        start, args = [childs[i] for i in [1, 3]]
-        end = start if args is None else max(args)
-        return ('fundef', start, end + 1)
-
-    def visit_args(self, node, childs):
-        line = childs[1]
-        return line
-
-    def visit_return(self, node, childs):
-        ret, end = [childs[i] for i in [0, 2]]
-        ret = None if ret is None else ret[0][0]
-        start = end if ret is None else ret
-        return ('return', start, end + 1)
-
-    def visit_params(self, node, childs):
-        line = childs[1]
-        return line
-
-    def visit_funcall(self, node, childs):
-        params, line, ret = [childs[i] for i in [0, 2, 4]]
-        ret = None if ret is None else ret[0][0]
-        start = line if params is None else min(params)
-        end = line if ret is None else max(line, ret)
-        return ('funcall', start, end + 1)
-
-    def visit_linenum(self, node, childs):
-        return int(node.text)
-
-    def generic_visit(self, node, childs):
-        res = [x for x in childs if x is not None]
-        if len(res) == 0:
-            return None
-        return res
-
-
-def fillblocks_with_normal(blocks):
-    oldblocks = [el for el in blocks]
-    for i in reversed(range(len(oldblocks) - 1)):
-        _, _, end = oldblocks[i]
-        _, start, _ = oldblocks[i + 1]
-        if end < start:
-            blocks.insert(i + 1, ('normal', end, start))
-    assert(set(range(blocks[-1][2])) == set([el for _, start, end in blocks for el in range(start, end)]))
-
-
-def gen_info_blocks(code):
-    grammarstring = []
-    for line, (op, _, _, _) in enumerate(code):
-        if op in ['function', 'pop', 'push', 'return', 'call']:
-            grammarstring.append(op + ':' + str(line) + ',')
-    grammarstring = ''.join(grammarstring)
-    parsetree = tac_grammar.parse(grammarstring)
-    blocks = AssemblyHelper().visit(parsetree)
-    fillblocks_with_normal(blocks)
-    return blocks
-
-'''
-Codeblocks to ASM
------------------
-'''
 
 op_to_asm = {
     '+': 'add',
@@ -185,37 +60,24 @@ def gen_stack_mapping(code, params):
                 continue
             if arg in params:
                 continue
-            currmap[arg] = len(currmap)
-    for param in params:
-        currmap[param] = len(currmap) + 1
+            currmap[arg] = -(len(currmap) + 1) * 4
+    for loc, param in enumerate(params):
+        currmap[param] = (loc + 2) * 4
     return currmap
 
 
 def fun_to_asm(code, assembly):
 
-    def arg_to_asm(arg, offset=0):
+    def arg_to_asm(arg):
         if is_var_or_temp(arg):
-            addr = register_to_stack[arg] * 4 + offset
-            return '%d(%%esp)' % addr
+            return '%d(%%ebp)' % register_to_stack[arg]
         else:
             return '$%d' % arg
 
     def add(op, arg1=None, arg2=None, comment=None, indent=True):
         assembly.append(ASMInstruction(op, arg1, arg2, comment, indent))
 
-    def expand_if_necc(finalop, x, y, comment=None):
-        need_accum = is_var_or_temp(x) and is_var_or_temp(y)
-        x, y = [arg_to_asm(el) for el in [x, y]]
-        if need_accum:
-            add('mov', x, '%eax', comment=comment)
-            add(finalop, '%eax', y)
-        else:
-            add(finalop, x, y, comment=comment)
-
-    def to_assembly_normal(tac):
-        op, arg1, arg2, res = tac
-        sop = simplify_op(op)
-
+    def to_assembly(op, arg1, arg2, res):
         if op == 'jump':
             add('jmp', res)
         elif op == 'jumpfalse':
@@ -224,19 +86,28 @@ def fun_to_asm(code, assembly):
         elif op == 'label':
             add(res + ':', indent=False)
         elif op == 'function':
-            raise Exception
+            raise NotImplementedError
         elif op == 'call':
-            add('call', res)
+            raise NotImplementedError
         elif op == 'end-fun':
             add(None)
         elif op == 'return':
-            raise Exception
+            add('mov', '%ebp', '%esp')
+            add('pop', '%ebp')
+            add('ret')
         elif op == 'push':
-            add('push', arg_to_asm(arg1))
+            raise NotImplementedError
         elif op == 'pop':
-            add('push', arg_to_asm(res))
+            raise NotImplementedError
         elif op == 'assign':
-            expand_if_necc('movl', arg1, res, comment=res + ' := ' + str(arg1))
+            comment = res + ' := ' + str(arg1)
+            need_accum = is_var_or_temp(arg1) and is_var_or_temp(res)
+            arg1, res = [arg_to_asm(el) for el in [arg1, res]]
+            if need_accum:
+                add('mov', arg1, '%eax', comment=comment)
+                add('movl', '%eax', res)
+            else:
+                add('movl', arg1, res, comment=comment)
         elif op in ['*', '/', '%']:
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             add('mov', arg_to_asm(arg1), '%eax', comment=comment)
@@ -251,7 +122,7 @@ def fun_to_asm(code, assembly):
                 add('mov', '%edx', arg_to_asm(res))
             else:
                 add('mov', '%eax', arg_to_asm(res))
-        elif sop == 'binop':
+        elif op in bin_ops:
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             if op in op_is_comp:
                 add('mov', arg_to_asm(arg1), '%ebx', comment=comment)
@@ -277,88 +148,105 @@ def fun_to_asm(code, assembly):
         else:
             raise NotImplementedError
 
-    def to_assembly_fundef(fun, stack_regs):
-        add(fun + ':', indent=False)
-        add('sub', '$' + str(stack_regs * 4), '%esp',
-            comment='make space on stack for %d local registers' % stack_regs)
-        for locs, stacknum in register_to_stack.items():
-            add(None, comment=locs.rjust(5) + ' := ' + str(stacknum * 4) + '(%esp)')
-        add(None)
+    '''
+    Almost all TAC's can be directly mapped to a set of ASM instructions.
+    Special care has to be taken in 2 cases:
+        * 'pop'
+            could be a passed parameter in the beginning of the function
+            or a return value of a function call
+        * 'push'
+            could be a passed argument before a function call
+            or a return value at the end of a function
 
-    def to_assembly_pop_eax(reg):
-        add('mov', '%eax', arg_to_asm(reg))
+    To mitigate this problem we use a state-machine that operates on 
+    the TAC operation (with a lookahead to the next operation):
 
-    def to_assembly_push_eax(reg):
-        add('mov', arg_to_asm(reg), '%eax', comment='return ' + str(reg))
+        'fun-def' state (we start in this state):
+            'function','pop'
+                don't get mapped to ASM instructions. (but we save the names)
+            'any other operation'
+                means we are at the end of the function definition. We create
+                a new stackframe by allocating the appropriate space on the 
+                stack and saving the old base pointer.
+                'n' parameters are now on the stack in the range
+                    8(%ebp) to ((n+2)*4)(%ebp)
+                and 'n' local variables are now in the range 
+                    -4(%ebp) to ((n+1)*-4)(%ebp)
+                the next and final state is 'fun-body'
 
-    def to_assembly_make_frame(callname, args, retval):
-        fstr = callname + '(' + ','.join([str(el) for el in args]) + ')'
-        comment = fstr if retval is None else (retval + ' := ' + fstr)
-        add(None)
-        add('push', '%ebp', comment=comment)
-        add('mov', '%esp', '%ebp')
+        'fun-body' state:
+            'push'
+                could be a argument push, or return value. Thus we look to the
+                next operation. If it is a return operation we know that we
+                have to move the result into the '%eax' register. Otherwise we
+                just push the argument (and save its name).
+            'call'
+                we generate a 'call' ASM instruction and reset the stack pointer
+                we also generate a nice comment with the arguments we pushed 
+                beforehand. By looking at the next operation we also know if
+                the function returns a value.
+            'pop'
+                this has to be a return value from a function call (the other
+                type of 'pop' only happens in function definitions). Thus we
+                just assign the value of '%eax' to the register.
+            'any other operation'
+                uses the simple mapping defined in the 'to_assembly' function
+    '''
+    register_to_stack = None
+    state, fname, params = 'fun-def', None, []
+    line = 0
+    args = []
+    while line < len(code):
+        tac = code[line]
+        op, arg1, _, res = tac
 
-    def to_assembly_destroy_frame(param_num):
-        if param_num > 0:
-            add('add', '$' + str(param_num * 4), '%esp')
-        add('pop', '%ebp')
+        if state == 'fun-def':
+            if op == 'function':
+                fname = res
+            elif op == 'pop':
+                params.append(res)
+            else:
+                register_to_stack = gen_stack_mapping(code, params)
+                registersinframe = len(register_to_stack) - len(params)
+                # label
+                add(fname + ':\t', indent=False, comment='%d params already on stack' % len(params))
+                for var in params:
+                    add(None, comment=var.rjust(5) + ' := ' + arg_to_asm(var))
+                # stack frame
+                add('push', '%ebp')
+                add('mov', '%esp', '%ebp')
+                add('sub', '$' + str(registersinframe * 4), '%esp',
+                    comment='make space on stack for %d local registers' % registersinframe)
+                for var in register_to_stack:
+                    if var not in params:
+                        add(None, comment=var.rjust(5) + ' := ' + arg_to_asm(var))
+                add(None)
+                state = 'fun-body'
+                continue
 
-    def to_assembly_return(stack_regs):
-        add('add', '$' + str(stack_regs * 4), '%esp')
-        add('ret')
-
-    blocks = gen_info_blocks(code)
-    register_to_stack, registersinframe = None, 0
-    for btype, start, end in blocks:
-
-        if btype == 'fundef':
-            # gather info about function
-            fname = None
-            params = []
-            for op, _, _, res in code[start:end]:
-                if op == 'function':
-                    fname = res
-                if op == 'pop':
-                    params.append(res)
-            register_to_stack = gen_stack_mapping(code, params)
-            add(None,comment='%d params already on stack' % len(params))
-            registersinframe = len(register_to_stack) - len(params)
-            to_assembly_fundef(fname, registersinframe)
-
-        if btype == 'normal':
-            for tac in code[start:end]:
-                to_assembly_normal(tac)
-
-        if btype == 'funcall':
-            # gather info about call
-            callname, args, retval = None, [], None
-            for op, arg1, _, res in code[start:end]:
-                if op == 'pop':
-                    retval = res
-                if op == 'push':
+        elif state == 'fun-body':
+            if op == 'push':
+                nextop, _, _, _ = code[line + 1]
+                if nextop == 'return':
+                    add('mov', arg_to_asm(arg1), '%eax', comment='return ' + str(arg1))
+                    args = []
+                else:
                     args.append(arg1)
-                if op == 'call':
-                    callname = res
+                    add('push', arg_to_asm(arg1))
+            elif op == 'call':
+                nextop, _, _, nextret = code[line + 1]
+                retvalue = (nextret + ' := ') if nextop == 'pop' else ''
+                comment = retvalue + res + '(' + ','.join([str(el) for el in reversed(args)]) + ')'
+                add('call', res, comment=comment)
+                if len(args) > 0:
+                    add('add', '$' + str(len(args) * 4), '%esp')
+                args = []
+            elif op == 'pop':
+                add('mov', '%eax', arg_to_asm(res))
+            else:
+                to_assembly(*tac)
 
-            to_assembly_make_frame(callname, args, retval)
-            for tac in code[start:end]:
-                op, arg1, _, _ = tac
-                if op == 'push':
-                    add('push', arg_to_asm(arg1, offset=4))
-                elif op != 'pop':
-                    to_assembly_normal(tac)
-            to_assembly_destroy_frame(len(args))
-            if retval is not None:
-                to_assembly_pop_eax(retval)
-            add(None)
-
-        if btype == 'return':
-            for tac in code[start:end]:
-                op, reg, _, _ = tac
-                if op == 'push':
-                    to_assembly_push_eax(reg)
-                elif op == 'return':
-                    to_assembly_return(registersinframe)
+        line += 1
 
 
 def codetoassembly(code, verbose=0, assemblyfile=None):
@@ -367,11 +255,11 @@ def codetoassembly(code, verbose=0, assemblyfile=None):
     for _, start, end in fun_ranges:
         fun_to_asm(code[start:end], assembly)
 
-    if verbose > 0: # pragma: no cover
+    if verbose > 0:  # pragma: no cover
         print('\n' + ' GNU Assembly '.center(40, '#'))
         print('\n'.join(map(str, assembly)))
 
-    if assemblyfile is not None: # pragma: no cover
+    if assemblyfile is not None:  # pragma: no cover
         if verbose > -1:
             print('Writing assembly to: \'%s\'' % assemblyfile)
         with open(assemblyfile, 'w') as f:

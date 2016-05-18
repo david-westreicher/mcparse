@@ -22,7 +22,7 @@ class TestAssembler(unittest.TestCase):
     def evaluate(self, asm):
         vals = {'%esp': 0}
         valmapping = {}
-        line = 5
+        line = 6
         while asm[line].op is None and asm[line].comment is not None:
             var, stackstr = asm[line].comment.strip().split(':=')
             valmapping[stackstr.strip()] = var.strip()
@@ -91,13 +91,20 @@ class TestAssembler(unittest.TestCase):
                 }
             }''' % ('\n'.join(['int %s = %d;' % (name, val) for val, name in enumerate(vardefs)]))
             asm = codetoasm(code)
-            self.assertEqual('.globl main', asm[0])
-            self.assertEqual('main:', asm[3].op)
+            asm = [el for el in asm if type(el) is not str and el.op is not None]
+
+            # save basepointer and set it to top of the stack
+            self.assertEqual(ASMInstruction('push', '%ebp'), asm[1])
+            self.assertEqual(ASMInstruction('mov', '%esp', '%ebp'), asm[2])
+
             # make space for n local registers
             n = len(vardefs)
-            self.assertEqual(ASMInstruction('sub', '$' + str(n * 4), '%esp'), asm[4])
-            # reset stack pointer in the end
-            self.assertEqual(ASMInstruction('add', '$' + str(n * 4), '%esp'), asm[-2])
+            self.assertEqual(ASMInstruction('sub', '$' + str(n * 4), '%esp'), asm[3])
+
+            # restore stack/base pointer and return
+            self.assertEqual(ASMInstruction('mov', '%ebp', '%esp'), asm[-3])
+            self.assertEqual(ASMInstruction('pop', '%ebp'), asm[-2])
+            self.assertEqual(ASMInstruction('ret'), asm[-1])
 
     def test_compare_ops(self):
         for expr in [
