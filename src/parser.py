@@ -6,7 +6,9 @@ from parsimonious import Grammar, NodeVisitor
 
 mcgrammar = Grammar(
     """
-    statement        = fun_def / return_stmt / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
+    statement        = array_def / fun_def / return_stmt / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
+    array_def        = type _ "[" _ int_lit _ "]" _ identifier _ ";"
+    array_exp        = identifier _ "[" _ expression _ "]"
     fun_def          = type_or_void _ identifier _ "(" _ params? _ ")" _ compound_stmt
     params           = param ( _ "," _ param )*
     param            = type _ identifier
@@ -24,7 +26,7 @@ mcgrammar = Grammar(
     call_expr        = identifier _ "(" _ arguments? _ ")"
     arguments        = expression ( _ "," _ expression )*
     binary_operation = single_expr _ bin_op _ expression
-    single_expr      = paren_expr / unary_expr / literal / variable
+    single_expr      = paren_expr / unary_expr / array_exp / literal / variable
     bin_op           = "+" / "-" / "*" / "/" / "%" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
     paren_expr       = "(" _ expression _ ")"
     unary_expr       = unop _ expression
@@ -37,6 +39,8 @@ mcgrammar = Grammar(
     _                = ~"\s*"
     """)
 
+ArrayDef = namedtuple('ArrayDef', ['type', 'size', 'name'])
+ArrayExp = namedtuple('ArrayExp', ['name', 'expression'])
 FunDef = namedtuple('FunDef', ['ret_type', 'name', 'params', 'stmts'])
 RetStmt = namedtuple('RetStmt', ['expression'])
 IfStmt = namedtuple('IfStmt', ['expression', 'if_stmt', 'else_stmt'])
@@ -61,6 +65,14 @@ class ASTFormatter(NodeVisitor):
         if isinstance(tail, list):
             return [head] + tail
         return children
+
+    def visit_array_def(self, node, childs):
+        type, size, name = (childs[i] for i in [0, 4, 8])
+        return ArrayDef(type, size.val, name)
+
+    def visit_array_exp(self, node, childs):
+        name, expression = (childs[i] for i in [0, 4])
+        return ArrayExp(name, expression)
 
     def visit_fun_def(self, node, childs):
         ret_type, name, params, stmts = (childs[i] for i in [0, 2, 6, 10])

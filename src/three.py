@@ -1,7 +1,7 @@
 from collections import namedtuple
 from warnings import warn
 from .parser import parsefile, prettyast
-from .parser import FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
+from .parser import ArrayDef, ArrayExp, FunDef, RetStmt, IfStmt, WhileStmt, ForStmt, DeclStmt, CompStmt, FunCall, BinOp, UnaOp, Literal, Variable
 from .utils import all_ops, bin_ops, un_ops, lib_sigs
 
 
@@ -160,6 +160,23 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     scope = Scope(ast) if scope is None else scope
     three = [] if three is None else three
 
+    if type(ast) == ArrayDef:
+        if ast.name in scope.scopestack[-1]:
+            # TODO double declaration should be valid if in new scope
+            raise ScopeException('Variable "%s" is already declared' % ast.name)
+        three.append(['arr-def', ast.size, ast.name, None])
+        scope.add(ast.name)
+
+    if type(ast) == ArrayExp:
+        if result is None:
+            warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
+            warn(warnmsg)
+        if ast.name not in scope:
+            raise ScopeException('Variable "%s" not in scope (probably not declared before)' % ast.name)
+        tmpindex = scope.newtemp()
+        asttothree(ast.expression, three, scope, tmpindex)
+        three.append(['arr-acc', tmpindex, ast.name, result])
+
     if type(ast) == FunDef:
         scope.function_begin(ast.name, ast.ret_type, ast.params)
         three.append(['function', None, None, ast.name])
@@ -278,18 +295,23 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             three.append(['pop', None, None, result])
 
     if type(ast) == BinOp:
-        if ast.operation == '=' and type(ast.lhs) == Variable:
+        if ast.operation == '=' and type(ast.lhs) in [Variable, ArrayExp]:
             # this is an assignment posing as a binop
             tmpvarrhs = scope.newtemp()
             varname = ast.lhs.name
             if varname not in scope:
                 raise ScopeException('Variable "%s" not in scope (probably not declared before)' % varname)
             asttothree(ast.rhs, three, scope, tmpvarrhs)
-            three.append(['assign', tmpvarrhs, None, varname])
+            if type(ast.lhs) == Variable:
+                three.append(['assign', tmpvarrhs, None, varname])
+            if type(ast.lhs) == ArrayExp:
+                tmpindex = scope.newtemp()
+                asttothree(ast.lhs.expression, three, scope, tmpindex)
+                three.append(['arr-ass', tmpindex, tmpvarrhs, varname])
         else:
             if result is None:
                 warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
-                warnings.warn(warnmsg)
+                warn(warnmsg)
             tmpvarlhs = scope.newtemp()
             tmpvarrhs = scope.newtemp()
             asttothree(ast.lhs, three, scope, tmpvarlhs)
@@ -299,7 +321,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     if type(ast) == UnaOp:
         if result is None:
             warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
-            warnings.warn(warnmsg)
+            warn(warnmsg)
         tmpvar = scope.newtemp()
         asttothree(ast.expression, three, scope, tmpvar)
         three.append([ast.operation, tmpvar, None, result])
@@ -307,7 +329,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
     if type(ast) == Literal:
         if result is None:
             warnmsg = 'No result set, computation is unnecessary.\n %s' % prettyast(ast)
-            warnings.warn(warnmsg)
+            warn(warnmsg)
         three.append(['assign', ast.val, None, result])
 
     if type(ast) == Variable:

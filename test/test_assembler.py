@@ -323,6 +323,109 @@ class IntegrationTest(unittest.TestCase):
             self.assertEqual(result, primes(num))
         self.clean(asmfile)
 
+    def test_array_simple(self):
+        code = '''{
+            int main(){
+                int[3] arr;
+                arr[0] = read_int();
+                arr[1] = 2;
+                arr[2] = 3;
+                int x = arr[0]*2;
+                int y = arr[1]*2;
+                int z = arr[2]*2;
+                print_int(x);
+                print_int(y);
+                print_int(z);
+                return 0;
+            }
+        }'''
+        '''
+        '''
+        asmfile = self.compile(code)
+        for num in range(10):
+            result = self.execute_code(asmfile, num)
+            self.assertEqual(result, [num * 2, 2 * 2, 3 * 2])
+        self.clean(asmfile)
+
+    def test_array_loop(self):
+        code = '''{
+            int main(){
+                int[100] arr;
+                int setnums = read_int();
+                for(int i =0;i<setnums+1;i=i+1){
+                    arr[i] = i;
+                }
+                for(i =0;i<setnums+1;i=i+1){
+                    print_int(arr[i]);
+                }
+                return 0;
+            }
+        }'''
+        asmfile = self.compile(code)
+        for num in range(100):
+            result = self.execute_code(asmfile, num)
+            self.assertEqual(result, list(range(num + 1)))
+        self.clean(asmfile)
+
+    def test_array_function(self):
+        code = '''{
+            int sum(int n){
+                int[100] arr;
+                for(int i=0;i<n;i=i+1){
+                    arr[i] = i;
+                }
+                int sum = 0;
+                for(i=0;i<n;i=i+1){
+                    sum = sum + arr[i];
+                }
+                return sum;
+            }
+
+            int main(){
+                int res = sum(read_int());
+                print_int(res);
+                return 0;
+            }
+        }'''
+        asmfile = self.compile(code)
+        for num in range(100):
+            result = self.execute_code(asmfile, num)
+            self.assertEqual(result[0], sum(range(num)))
+        self.clean(asmfile)
+
+    def test_array_multiple(self):
+        code = '''{
+            int main(){
+                read_int();
+                int i;
+                int[5] a;
+                int[5] b;
+                int[5] c;
+                for(i=0;i<5;i=i+1){
+                    a[i] = i;
+                    b[i] = 5-i;
+                }
+                for(i=0;i<5;i=i+1){
+                    c[i] = a[i]*b[i];
+                }
+                int sum = 0;
+                for(i=0;i<5;i=i+1){
+                    sum = sum + c[i];
+                }
+                print_int(sum);
+                return 0;
+            }
+        }'''
+
+        def test_fun(num):
+            arr = [a * (5 - b) for a, b in zip(range(0, 5), range(0, 5))]
+            return sum(arr)
+        asmfile = self.compile(code)
+        for num in range(100):
+            result = self.execute_code(asmfile, num)
+            self.assertEqual(result[0], test_fun(num))
+        self.clean(asmfile)
+
 
 if __name__ == '__main__':
     unittest.main()

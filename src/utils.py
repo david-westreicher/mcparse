@@ -11,6 +11,9 @@ all_ops = [
     'assign',
     'binop',
     'unop',
+    'arr-def',
+    'arr-acc',
+    'arr-ass',
 ]
 
 op_uses_values = {
@@ -20,6 +23,8 @@ op_uses_values = {
     'assign': [1],
     'binop': [1, 2],
     'unop': [1],
+    'arr-acc': [1],
+    'arr-ass': [1, 2],
 }
 
 op_sets_result = [
@@ -27,6 +32,7 @@ op_sets_result = [
     'assign',
     'binop',
     'unop',
+    'arr_acc',
 ]
 
 bin_ops = ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']

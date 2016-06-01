@@ -29,7 +29,7 @@ class ASMInstruction:
 op_to_asm = {
     '+': 'add',
     '-': 'sub',
-    '*': 'imul',
+    '*': 'imull',
     '/': 'idivl',
     '%': 'idivl',
     '==': 'sete',
@@ -50,6 +50,11 @@ def gen_stack_mapping(code, params):
     for tac in code:
         op, _, _, _ = tac
         op = simplify_op(op)
+        if op.startswith('arr-'):
+            if op == 'arr-def':
+                op, size, name, _ = tac
+                for i in range(size):
+                    currmap[name + '[' + str(size - i - 1) + ']'] = -(len(currmap) + 1) * 4
         if op not in op_uses_values and op not in op_sets_result:
             continue
         for argpos in op_uses_values[op] + ([3]if op in op_sets_result else[]):
@@ -145,6 +150,20 @@ def fun_to_asm(code, assembly):
             add('movl', '$0', arg_to_asm(res))
             add('cmp', '$0', '%eax')
             add('sete', arg_to_asm(res))
+        elif op == 'arr-def':
+            pass
+        elif op == 'arr-acc':
+            name, index = arg2, arg1
+            comment = res + ' = ' + str(name) + '[' + str(index) + ']'
+            add('movl', arg_to_asm(index), '%ecx', comment=comment)
+            add('movl', '%d(%s,%s,4)' % (register_to_stack[name + '[0]'], '%ebp', '%ecx'), '%ebx')
+            add('movl', '%ebx', arg_to_asm(res), comment=comment)
+        elif op == 'arr-ass':
+            name, index, result = res, arg1, arg2
+            comment = name + '[' + str(index) + ']' + ' = ' + str(result)
+            add('movl', arg_to_asm(result), '%eax', comment=comment)
+            add('movl', arg_to_asm(index), '%ecx')
+            add('movl', '%eax', '%d(%s,%s,4)' % (register_to_stack[name + '[0]'], '%ebp', '%ecx'))
         else:
             raise NotImplementedError
 
