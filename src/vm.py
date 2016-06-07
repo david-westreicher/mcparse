@@ -185,10 +185,10 @@ def run(bbs, verbose=0):
 
     vals = {arg: mem[mempos] for arg, mempos in currframe.arg_to_mem.items()
             if type(arg) is str and not arg.startswith('.t')}
-    if verbose > 0: # pragma: no cover
+    if verbose > 0:  # pragma: no cover
         print('\n' + ' VM result '.center(40, '#'))
         print(vals)
-    if verbose > 1: # pragma: no cover
+    if verbose > 1:  # pragma: no cover
         print('\n' + ' VM bytecode '.center(40, '#'))
         mem_to_arg = {k: v for v, k in arg_to_mem.items()}
         for linenum, (op, arg1, arg2, res) in enumerate(code):

@@ -424,7 +424,6 @@ class IntegrationTest(unittest.TestCase):
             self.assertEqual(result[0], test_fun(num))
         self.clean(asmfile)
 
-
     def test_array_dynamic_def(self):
         code = '''{
             int sum(int n){

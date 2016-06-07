@@ -18,9 +18,9 @@ def liveness(bbs, cfg, verbose=0):
         return uevars[b] | (livein - killed[b])
     inb, outb = worklist(bbs, cfg, lambda: set(), transform, backward=True)
 
-    if verbose > 0: # pragma: no cover
+    if verbose > 0:  # pragma: no cover
         printinout(bbs, inb, outb, True)
-    if verbose > 1: # pragma: no cover
+    if verbose > 1:  # pragma: no cover
         print('uevars: %s' % uevars)
         print('killed: %s' % killed)
 
@@ -61,7 +61,7 @@ def worklist(bbs, cfg, initer, transform, backward=False):
     return inb, outb
 
 
-def printinout(bbs, inb, outb, backward): # pragma: no cover
+def printinout(bbs, inb, outb, backward):  # pragma: no cover
     print('\n' + ' Live variable analysis '.center(40, '#'))
     from .bb import printbbsyield
     for i, block in enumerate(printbbsyield(bbs)):

@@ -15,12 +15,12 @@ def bbstocallgraph(bbs, verbose=0, dotfile=None):
     if 'main' in fun_ranges and '__global__' in fun_ranges:
         callgraph['__global__'].add('main')
 
-    if verbose > 0: # pragma: no cover
+    if verbose > 0:  # pragma: no cover
         print('\n' + ' Call Graph '.center(40, '#'))
         for el in callgraph:
             print(str(el).ljust(10) + '\t->\t' + (', '.join([str(el) for el in callgraph[el]])))
 
-    if dotfile is not None: # pragma: no cover
+    if dotfile is not None:  # pragma: no cover
         from .utils import makeDotFile
         makeDotFile(dotfile, bbs)
 
