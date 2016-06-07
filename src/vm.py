@@ -71,10 +71,7 @@ def bbs_to_bytecode(bbs, verbose=0):
                 return arg_to_mem[arg]
             arg_to_mem[arg] = len(arg_to_mem)
             if type(arg) is str:
-                if arg.startswith('default-'):
-                    mem.append(0)
-                else:
-                    mem.append(None)
+                mem.append(None)
             else:
                 mem.append(arg)
             return arg_to_mem[arg]

@@ -68,8 +68,6 @@ def isvar(arg):
         return False
     if arg.startswith('.t'):
         return False
-    if arg.startswith('default-'):
-        return False
     return True
 
 

@@ -17,7 +17,7 @@ class TestThree(unittest.TestCase):
         self.assertEqual(len(three), 1)
         op, arg1, arg2, res = three[0]
         self.assertEqual(op, 'assign')
-        self.assertEqual(arg1, 'default-int')
+        self.assertEqual(arg1, 0)
         self.assertEqual(arg2, None)
         self.assertEqual(res, 'x')
 

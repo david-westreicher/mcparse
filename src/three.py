@@ -277,7 +277,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             asttothree(ast.expression, three, scope, tmpvar)
             three.append(['assign', tmpvar, None, ast.variable])
         else:
-            three.append(['assign', 'default-' + ast.type, None, ast.variable])
+            three.append(['assign', 0, None, ast.variable])
         scope.add(ast.variable)
 
     if type(ast) == CompStmt:
