@@ -150,7 +150,7 @@ def fun_to_asm(code, assembly):
             add('sete', arg_to_asm(res))
         elif op == 'arr-def':
             name, size = str(arg2), arg1
-            comment = 'new float ' + name + '[' + str(size) + ']'
+            comment = 'new int ' + name + '[' + str(size) + ']'
             add('movl', arg_to_asm(size), '%ebx', comment=comment)
             add('leal', '(,%ebx, 4)', '%ebx')
             add('sub', '%ebx', '%esp')
