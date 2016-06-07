@@ -164,7 +164,9 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         if ast.name in scope.scopestack[-1]:
             # TODO double declaration should be valid if in new scope
             raise ScopeException('Variable "%s" is already declared' % ast.name)
-        three.append(['arr-def', ast.size, ast.name, None])
+        tmpsize = scope.newtemp()
+        asttothree(ast.size, three, scope, tmpsize)
+        three.append(['arr-def', tmpsize, ast.name, None])
         scope.add(ast.name)
 
     if type(ast) == ArrayExp:
@@ -350,13 +352,19 @@ def prettythreestr(op, arg1, arg2, res): # pragma: no cover
         return '{:.6s}\t:=\t{:.6s}'.format(res, str(arg1))
     elif op in all_ops:
         if res is None:
-            # return, end-fun, push
+            # return, end-fun, push, array-def
             if op in ['return', 'end-fun']:
                 return '{:.10s}'.format(op)
+            elif op in ['arr-def']:
+                return '{:.10s}\t{:.10s}[{:.10s}]'.format('newarr', arg2, str(arg1))
             else:
                 return '{:.10s}\t{:.10s}'.format(op, str(arg1))
         elif op == 'jumpfalse':
             return '{:.10s}\t{:.6s}\t{:.6s}'.format(op, str(arg1), res)
+        elif op == 'arr-ass':
+            return '{:.6s}[{:.6s}]\t:=\t{:.6s}'.format(res, str(arg1), str(arg2))
+        elif op == 'arr-acc':
+            return '{:.6s}\t:=\t{:.6s}[{:.6s}]'.format(res, str(arg2), str(arg1))
         else:
             return '{:.10s}\t{:.10s}'.format(op, str(res))
     elif op in bin_ops:

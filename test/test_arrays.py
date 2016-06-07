@@ -31,12 +31,12 @@ class TestGrammar(unittest.TestCase):
 
     def test_array_def(self):
         for typet in ['int', 'float']:
-            for num in ['7', '0', '8']:
+            for num in ['7', '0', '8', 'a*9']:
                 for varname in ['a', '_b', 'abcdef']:
                     self.checkstmt(typet + '[' + num + '] ' + varname + ';', 'array_def', True)
         self.checkstmt('int[] asd;', 'array_def', False)
-        self.checkstmt('int[-1] asd;', 'array_def', False)
-        self.checkstmt('int[4*3] asd;', 'array_def', False)
+        self.checkstmt('int[-1] asd;', 'array_def', True)
+        self.checkstmt('int[4*3] asd;', 'array_def', True)
 
     def test_array_expression(self):
         for varname in ['a', '_b', 'abcdef']:
@@ -63,7 +63,13 @@ class TestAST(unittest.TestCase):
             self.assertEqual(type(ast), parser.ArrayDef)
             self.assertEqual(ast.name, name)
             self.assertEqual(ast.type, typet)
-            self.assertEqual(ast.size, size)
+            self.assertEqual(ast.size, parser.Literal('int', size))
+        # dynamic size
+        ast = parser.parse("float[2*a] arr;")
+        self.assertEqual(type(ast), parser.ArrayDef)
+        self.assertEqual(ast.name, 'arr')
+        self.assertEqual(ast.type, typet)
+        self.assertEqual(ast.size, parser.BinOp('*', parser.Literal('int', 2), parser.Variable('a')))
 
     def test_array_exp(self):
         for name, expression in product(
@@ -114,8 +120,9 @@ class TestThree(unittest.TestCase):
                 [0, 1, 2, 8, 100, 99]):
             three = codetothree(
                 """%s[%s] %s;""" % (typet, num, name))
-            self.assertEqual(len(three), 1)
-            self.checkthree(three[0], ['arr-def', num, name, None])
+            self.assertEqual(len(three), 2)
+            self.checkthree(three[0], ['assign', num, None, '.t0'])
+            self.checkthree(three[1], ['arr-def', '.t0', name, None])
 
     def test_array_assignment(self):
         three = codetothree(
@@ -123,11 +130,12 @@ class TestThree(unittest.TestCase):
                 int[10] foo;
                 foo[5] = 5;
             }""")
-        self.assertEqual(len(three), 4)
-        self.checkthree(three[0], ['arr-def', 10, 'foo'])
-        self.checkthree(three[1], ['assign', 5, None, '.t0'])
+        self.assertEqual(len(three), 5)
+        self.checkthree(three[0], ['assign', 10, None, '.t0'])
+        self.checkthree(three[1], ['arr-def', '.t0', 'foo'])
         self.checkthree(three[2], ['assign', 5, None, '.t1'])
-        self.checkthree(three[3], ['arr-ass', '.t1', '.t0', 'foo'])
+        self.checkthree(three[3], ['assign', 5, None, '.t2'])
+        self.checkthree(three[4], ['arr-ass', '.t2', '.t1', 'foo'])
 
 if __name__ == '__main__':
     unittest.main()

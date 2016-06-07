@@ -23,6 +23,7 @@ op_uses_values = {
     'assign': [1],
     'binop': [1, 2],
     'unop': [1],
+    'arr-def': [1],
     'arr-acc': [1],
     'arr-ass': [1, 2],
 }

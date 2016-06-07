@@ -7,7 +7,7 @@ from parsimonious import Grammar, NodeVisitor
 mcgrammar = Grammar(
     """
     statement        = array_def / fun_def / return_stmt / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
-    array_def        = type _ "[" _ int_lit _ "]" _ identifier _ ";"
+    array_def        = type _ "[" _ expression _ "]" _ identifier _ ";"
     array_exp        = identifier _ "[" _ expression _ "]"
     fun_def          = type_or_void _ identifier _ "(" _ params? _ ")" _ compound_stmt
     params           = param ( _ "," _ param )*
@@ -68,7 +68,7 @@ class ASTFormatter(NodeVisitor):
 
     def visit_array_def(self, node, childs):
         type, size, name = (childs[i] for i in [0, 4, 8])
-        return ArrayDef(type, size.val, name)
+        return ArrayDef(type, size, name)
 
     def visit_array_exp(self, node, childs):
         name, expression = (childs[i] for i in [0, 4])

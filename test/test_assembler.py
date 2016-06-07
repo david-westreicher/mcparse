@@ -339,8 +339,6 @@ class IntegrationTest(unittest.TestCase):
                 return 0;
             }
         }'''
-        '''
-        '''
         asmfile = self.compile(code)
         for num in range(10):
             result = self.execute_code(asmfile, num)
@@ -426,6 +424,30 @@ class IntegrationTest(unittest.TestCase):
             self.assertEqual(result[0], test_fun(num))
         self.clean(asmfile)
 
+
+    def test_array_dynamic_def(self):
+        code = '''{
+            int sum(int n){
+                int[n] arr;
+                for(int i=0;i<n;i=i+1){
+                    arr[i] = i;
+                }
+                int sum = 0;
+                for(i=0;i<n;i=i+1){
+                    sum = sum + arr[i];
+                }
+                return sum;
+            }
+            int main(){
+                print_int(sum(read_int()));
+                return 0;
+            }
+        }'''
+        asmfile = self.compile(code)
+        for num in range(3):
+            result = self.execute_code(asmfile, num)
+            self.assertEqual(result, [sum(range(num))])
+        self.clean(asmfile)
 
 if __name__ == '__main__':
     unittest.main()
