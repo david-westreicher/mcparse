@@ -44,7 +44,7 @@ class TestAssembler(unittest.TestCase):
                 vals[instr.arg2] = const(instr.arg1)
             if instr.op == 'add':
                 vals[instr.arg2] += const(instr.arg1)
-            if instr.op == 'imul':
+            if instr.op == 'imull':
                 vals['%eax'] = vals['%eax'] * const(instr.arg1)
             if instr.op == 'cdq':
                 vals['%edx'] = 0
