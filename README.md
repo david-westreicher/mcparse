@@ -160,6 +160,9 @@ creates a **Function Call Graph** (`fcg: 'str' -> '[str]'`) from some basic bloc
 ### vm.py
 returns the values of the variables after the code was run.
 
+### assembler.py
+converts the TAC to x86 assembly (AT&T syntax)
+
 ## Build
 ```shell
 $ pip install -r requirements.txt
@@ -201,8 +204,12 @@ All the scripts also accept some verbose flags for debugging: `-v / -vv / -vvv`
   ```
   $ python -m src.vm examples/test23.mc
   ```
+* Assembler
+  ```
+  $ python -m src.assembler examples/array_simple.mc [--lvn]
+  ```
 
-## Example
+## Examples
 ```
 $ python -m src.callgraph examples/funcmutrec.mc graph.dot --lvn
 
@@ -323,6 +330,132 @@ $ python -m src.vm examples/fib.mc
 
 ############## VM result ###############
 {'f1': 55, 'f2': 89, 'i': 10, 'nthfib': 10, 'fib': 55, 'nextfib': 89}
+```
+
+The Assembler generates x86 assembly and the code is executed
+```
+$ util/build.py examples/array_dynamic_sum.mc --lvn --execute
+python -m src.assembler examples/array_dynamic_sum.mc --lvn
+
+############# Source code ##############
+{
+    int sum(int n){
+        int[n] arr;
+        for(int i=0;i<n;i=i+1){
+            arr[i] = i;
+        }
+        int sum = 0;
+        for(i=0;i<n;i=i+1){
+            sum = sum + arr[i];
+        }
+        return sum;
+    }
+    int main(){
+        print_int(sum(read_int()));
+        return 0;
+    }
+}
+
+############# GNU Assembly #############
+.globl main
+.text
+sum:		                   	# 1 params already on stack
+	                        	#     n := 8(%ebp)
+	push 	%ebp              
+	mov  	%esp, %ebp        
+	sub  	$36, %esp         	# make space on stack for 9 local registers
+	                        	#   arr := -4(%ebp)
+	                        	#     i := -8(%ebp)
+	                        	#   sum := -20(%ebp)
+	                        	#   .t2 := -12(%ebp)
+	                        	#   .t7 := -16(%ebp)
+	                        	#  .t15 := -32(%ebp)
+	                        	#  .t17 := -28(%ebp)
+	                        	#  .t12 := -24(%ebp)
+	                        	#  .t19 := -36(%ebp)
+	                        
+	movl 	8(%ebp), %ebx     	# new int arr[n]
+	leal 	(,%ebx, 4), %ebx  
+	sub  	%ebx, %esp        
+	movl 	%esp, -4(%ebp)    
+	movl 	$0, -8(%ebp)      	# i := 0
+L0:  	                   
+	mov  	-8(%ebp), %ebx    	# .t2 = i < n
+	mov  	8(%ebp), %eax     
+	movl 	$0, -12(%ebp)     
+	cmp  	%eax, %ebx        
+	setl 	-12(%ebp)         
+	cmp  	$0, -12(%ebp)     	# if(.t2==0) goto L1
+	je   	L1                
+	movl 	-8(%ebp), %eax    	# arr[i] = i
+	movl 	-8(%ebp), %ebx    
+	movl 	-4(%ebp), %ecx    
+	movl 	%eax, -4(%ecx,%ebx,4)
+	mov  	-8(%ebp), %eax    	# .t7 = i + 1
+	add  	$1, %eax          
+	mov  	%eax, -16(%ebp)   
+	mov  	-16(%ebp), %eax   	# i := .t7
+	movl 	%eax, -8(%ebp)    
+	jmp  	L0                
+L1:  	                   
+	movl 	$0, -20(%ebp)     	# sum := 0
+	movl 	$0, -8(%ebp)      	# i := 0
+L2:  	                   
+	mov  	-8(%ebp), %ebx    	# .t12 = i < n
+	mov  	8(%ebp), %eax     
+	movl 	$0, -24(%ebp)     
+	cmp  	%eax, %ebx        
+	setl 	-24(%ebp)         
+	cmp  	$0, -24(%ebp)     	# if(.t12==0) goto L3
+	je   	L3                
+	movl 	-8(%ebp), %ebx    	# .t17 = arr[i]
+	movl 	-4(%ebp), %ecx    
+	movl 	-4(%ecx,%ebx,4), %eax
+	movl 	%eax, -28(%ebp)   
+	mov  	-20(%ebp), %eax   	# .t15 = sum + .t17
+	add  	-28(%ebp), %eax   
+	mov  	%eax, -32(%ebp)   
+	mov  	-32(%ebp), %eax   	# sum := .t15
+	movl 	%eax, -20(%ebp)   
+	mov  	-8(%ebp), %eax    	# .t19 = i + 1
+	add  	$1, %eax          
+	mov  	%eax, -36(%ebp)   
+	mov  	-36(%ebp), %eax   	# i := .t19
+	movl 	%eax, -8(%ebp)    
+	jmp  	L2                
+L3:  	                   
+	mov  	-20(%ebp), %eax   	# return sum
+	mov  	%ebp, %esp        
+	pop  	%ebp              
+	ret  	                  
+	                        
+main:		                  	# 0 params already on stack
+	push 	%ebp              
+	mov  	%esp, %ebp        
+	sub  	$8, %esp          	# make space on stack for 2 local registers
+	                        	#  .t24 := -4(%ebp)
+	                        	#  .t23 := -8(%ebp)
+	                        
+	call 	read_int          	# .t24 := read_int()
+	mov  	%eax, -4(%ebp)    
+	push 	-4(%ebp)          
+	call 	sum               	# .t23 := sum(.t24)
+	add  	$4, %esp          
+	mov  	%eax, -8(%ebp)    
+	push 	-8(%ebp)          
+	call 	print_int         	# print_int(.t23)
+	add  	$4, %esp          
+	mov  	$0, %eax          	# return 0
+	mov  	%ebp, %esp        
+	pop  	%ebp              
+	ret  	                  
+	                        
+Writing assembly to: 'examples/array_dynamic_sum.mc.s'
+gcc -gdwarf-3 -o examples/array_dynamic_sum.mc.bin examples/array_dynamic_sum.mc.s assembler/lib.c -m32
+examples/array_dynamic_sum.mc.bin
+Enter an integer: 10
+      45
+
 ```
 
 ## Tests

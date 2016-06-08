@@ -143,6 +143,9 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         assign      x                       var         var := x
         binop       x           y           var         var := x * y
         unop        x                       var         var := -x
+        arr-def     size        var                     var := new int[size]
+        arr-acc     index       arr         var         var := arr[index]
+        arr-ass     index       var         arr         arr[index] := var
 
             binop in ['+', '-', '*', '/', '%', '==', '!=', '<=', '>=', '<', '>']
             unop in ['u-', 'u!']
