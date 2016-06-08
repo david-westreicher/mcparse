@@ -158,17 +158,17 @@ def fun_to_asm(code, assembly):
         elif op == 'arr-acc':
             name, index = arg2, arg1
             comment = res + ' = ' + str(name) + '[' + str(index) + ']'
-            add('movl', arg_to_asm(index), '%ecx', comment=comment)
-            add('movl', arg_to_asm(name), '%edx')
-            add('movl', '-4(%s,%s,4)' % ('%edx', '%ecx'), '%ebx')
-            add('movl', '%ebx', arg_to_asm(res))
+            add('movl', arg_to_asm(index), '%ebx', comment=comment)
+            add('movl', arg_to_asm(name), '%ecx')
+            add('movl', '-4(%s,%s,4)' % ('%ecx', '%ebx'), '%eax')
+            add('movl', '%eax', arg_to_asm(res))
         elif op == 'arr-ass':
             name, index, result = res, arg1, arg2
             comment = name + '[' + str(index) + ']' + ' = ' + str(result)
             add('movl', arg_to_asm(result), '%eax', comment=comment)
-            add('movl', arg_to_asm(index), '%ecx')
-            add('movl', arg_to_asm(name), '%edx')
-            add('movl', '%eax', '-4(%s,%s,4)' % ('%edx', '%ecx'))
+            add('movl', arg_to_asm(index), '%ebx')
+            add('movl', arg_to_asm(name), '%ecx')
+            add('movl', '%eax', '-4(%s,%s,4)' % ('%ecx', '%ebx'))
         else:
             raise NotImplementedError
 

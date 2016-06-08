@@ -394,20 +394,20 @@ class IntegrationTest(unittest.TestCase):
     def test_array_multiple(self):
         code = '''{
             int main(){
-                read_int();
+                int size = read_int();
                 int i;
-                int[5] a;
-                int[5] b;
-                int[5] c;
-                for(i=0;i<5;i=i+1){
+                int[size] a;
+                int[size] b;
+                int[size] c;
+                for(i=0;i<size;i=i+1){
                     a[i] = i;
-                    b[i] = 5-i;
+                    b[i] = size-i;
                 }
-                for(i=0;i<5;i=i+1){
+                for(i=0;i<size;i=i+1){
                     c[i] = a[i]*b[i];
                 }
                 int sum = 0;
-                for(i=0;i<5;i=i+1){
+                for(i=0;i<size;i=i+1){
                     sum = sum + c[i];
                 }
                 print_int(sum);
@@ -416,7 +416,7 @@ class IntegrationTest(unittest.TestCase):
         }'''
 
         def test_fun(num):
-            arr = [a * (5 - b) for a, b in zip(range(0, 5), range(0, 5))]
+            arr = [a * (num - b) for a, b in zip(range(0, num), range(0, num))]
             return sum(arr)
         asmfile = self.compile(code)
         for num in range(100):
