@@ -326,7 +326,7 @@ class IntegrationTest(unittest.TestCase):
     def test_array_simple(self):
         code = '''{
             int main(){
-                int[3] arr;
+                int arr[3];
                 arr[0] = read_int();
                 arr[1] = 2;
                 arr[2] = 3;
@@ -348,12 +348,12 @@ class IntegrationTest(unittest.TestCase):
     def test_array_loop(self):
         code = '''{
             int main(){
-                int[100] arr;
+                int arr[100];
                 int setnums = read_int();
                 for(int i =0;i<setnums+1;i=i+1){
                     arr[i] = i;
                 }
-                for(i =0;i<setnums+1;i=i+1){
+                for(int i =0;i<setnums+1;i=i+1){
                     print_int(arr[i]);
                 }
                 return 0;
@@ -368,12 +368,12 @@ class IntegrationTest(unittest.TestCase):
     def test_array_function(self):
         code = '''{
             int sum(int n){
-                int[100] arr;
+                int arr[100];
                 for(int i=0;i<n;i=i+1){
                     arr[i] = i;
                 }
                 int sum = 0;
-                for(i=0;i<n;i=i+1){
+                for(int i=0;i<n;i=i+1){
                     sum = sum + arr[i];
                 }
                 return sum;
@@ -396,9 +396,9 @@ class IntegrationTest(unittest.TestCase):
             int main(){
                 int size = read_int();
                 int i;
-                int[size] a;
-                int[size] b;
-                int[size] c;
+                int a[size];
+                int b[size];
+                int c[size];
                 for(i=0;i<size;i=i+1){
                     a[i] = i;
                     b[i] = size-i;
@@ -427,12 +427,12 @@ class IntegrationTest(unittest.TestCase):
     def test_array_dynamic_def(self):
         code = '''{
             int sum(int n){
-                int[n] arr;
+                int arr[n];
                 for(int i=0;i<n;i=i+1){
                     arr[i] = i;
                 }
                 int sum = 0;
-                for(i=0;i<n;i=i+1){
+                for(int i=0;i<n;i=i+1){
                     sum = sum + arr[i];
                 }
                 return sum;

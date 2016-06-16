@@ -7,7 +7,7 @@ from parsimonious import Grammar, NodeVisitor
 mcgrammar = Grammar(
     """
     statement        = array_def / fun_def / return_stmt / if_stmt / while_stmt / for_stmt / decl_stmt / compound_stmt / expr_stmt
-    array_def        = type _ "[" _ expression _ "]" _ identifier _ ";"
+    array_def        = type _ identifier _ "[" _ expression _ "]" _ ";"
     array_exp        = identifier _ "[" _ expression _ "]"
     fun_def          = type_or_void _ identifier _ "(" _ params? _ ")" _ compound_stmt
     params           = param ( _ "," _ param )*
@@ -39,7 +39,7 @@ mcgrammar = Grammar(
     _                = ~"\s*"
     """)
 
-ArrayDef = namedtuple('ArrayDef', ['type', 'size', 'name'])
+ArrayDef = namedtuple('ArrayDef', ['type', 'name', 'size'])
 ArrayExp = namedtuple('ArrayExp', ['name', 'expression'])
 FunDef = namedtuple('FunDef', ['ret_type', 'name', 'params', 'stmts'])
 RetStmt = namedtuple('RetStmt', ['expression'])
@@ -67,8 +67,8 @@ class ASTFormatter(NodeVisitor):
         return children
 
     def visit_array_def(self, node, childs):
-        type, size, name = (childs[i] for i in [0, 4, 8])
-        return ArrayDef(type, size, name)
+        type, name, size = (childs[i] for i in [0, 2, 6])
+        return ArrayDef(type, name, size)
 
     def visit_array_exp(self, node, childs):
         name, expression = (childs[i] for i in [0, 4])
@@ -210,6 +210,7 @@ def parsefile(fname, verbose=0):
     with open(fname, 'r') as mcfile:
         print('\n' + ' Source code '.center(40, '#'))
         stringcode = mcfile.read()[:-1]
+        stringcode = '{\n' + stringcode + '\n}'
         print(stringcode)
         return parse(stringcode, verbose)
 

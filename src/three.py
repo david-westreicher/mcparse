@@ -252,6 +252,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         three.append(['label', None, None, endwhilelabel])
 
     if type(ast) == ForStmt:
+        scope.open()
         # initialization
         asttothree(ast.initexpr, three, scope, None)
         # condition
@@ -262,7 +263,6 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         endforlabel = scope.newlabel()
         three.append(['jumpfalse', condvar, None, endforlabel])
         # body
-        scope.open()
         asttothree(ast.stmt, three, scope)
         # afterthought
         asttothree(ast.afterexpr, three, scope, None)

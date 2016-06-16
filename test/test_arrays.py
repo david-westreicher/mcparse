@@ -33,10 +33,10 @@ class TestGrammar(unittest.TestCase):
         for typet in ['int', 'float']:
             for num in ['7', '0', '8', 'a*9']:
                 for varname in ['a', '_b', 'abcdef']:
-                    self.checkstmt(typet + '[' + num + '] ' + varname + ';', 'array_def', True)
-        self.checkstmt('int[] asd;', 'array_def', False)
-        self.checkstmt('int[-1] asd;', 'array_def', True)
-        self.checkstmt('int[4*3] asd;', 'array_def', True)
+                    self.checkstmt(typet + ' ' + varname + ' [' + num + '] ' + ';', 'array_def', True)
+        self.checkstmt('int asd[];', 'array_def', False)
+        self.checkstmt('int asd[-1];', 'array_def', True)
+        self.checkstmt('int asd[4*3];', 'array_def', True)
 
     def test_array_expression(self):
         for varname in ['a', '_b', 'abcdef']:
@@ -59,13 +59,13 @@ class TestAST(unittest.TestCase):
                 [8, 100, 0],
                 ['bla', 'arrayname']):
             ast = parser.parse(
-                """%s[%s] %s;""" % (typet, size, name))
+                """%s %s [%s];""" % (typet, name, size))
             self.assertEqual(type(ast), parser.ArrayDef)
             self.assertEqual(ast.name, name)
             self.assertEqual(ast.type, typet)
             self.assertEqual(ast.size, parser.Literal('int', size))
         # dynamic size
-        ast = parser.parse("float[2*a] arr;")
+        ast = parser.parse("float arr[2*a];")
         self.assertEqual(type(ast), parser.ArrayDef)
         self.assertEqual(ast.name, 'arr')
         self.assertEqual(ast.type, typet)
@@ -119,7 +119,7 @@ class TestThree(unittest.TestCase):
                 ['bla', 'arrayname'],
                 [0, 1, 2, 8, 100, 99]):
             three = codetothree(
-                """%s[%s] %s;""" % (typet, num, name))
+                """%s %s[%s];""" % (typet, name, num))
             self.assertEqual(len(three), 2)
             self.checkthree(three[0], ['assign', num, None, '.t0'])
             self.checkthree(three[1], ['arr-def', '.t0', name, None])
@@ -127,7 +127,7 @@ class TestThree(unittest.TestCase):
     def test_array_assignment(self):
         three = codetothree(
             """{
-                int[10] foo;
+                int foo[10];
                 foo[5] = 5;
             }""")
         self.assertEqual(len(three), 5)
