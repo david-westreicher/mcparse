@@ -169,7 +169,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             raise ScopeException('Variable "%s" is already declared' % ast.name)
         tmpsize = scope.newtemp()
         asttothree(ast.size, three, scope, tmpsize)
-        three.append(['arr-def', tmpsize, ast.name, None])
+        three.append(['arr-def', tmpsize, ast.name, ast.type])
         scope.add(ast.name)
 
     if type(ast) == ArrayExp:
@@ -187,7 +187,7 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         three.append(['function', None, None, ast.name])
         for paramtype, paramname in ast.params:
             scope.add(paramname)
-            three.append(['pop', None, None, paramname])
+            three.append(['pop', None, paramtype, paramname])
         asttothree(ast.stmts, three, scope)
         # check if last statement is a return
         scope.function_end(three)
@@ -278,9 +278,9 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
         if ast.expression is not None:
             tmpvar = scope.newtemp()
             asttothree(ast.expression, three, scope, tmpvar)
-            three.append(['assign', tmpvar, None, ast.variable])
+            three.append(['assign', tmpvar, ast.type, ast.variable])
         else:
-            three.append(['assign', 0, None, ast.variable])
+            three.append(['assign', 0, ast.type, ast.variable])
         scope.add(ast.variable)
 
     if type(ast) == CompStmt:

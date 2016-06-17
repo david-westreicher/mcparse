@@ -1,3 +1,4 @@
+import struct
 from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op, op_is_comp, bin_ops
 
 
@@ -28,8 +29,10 @@ class ASMInstruction:
 
 op_to_asm = {
     '+': 'add',
+    'f+': 'faddp',
     '-': 'sub',
     '*': 'imull',
+    'f*': 'fmulp',
     '/': 'idivl',
     '%': 'idivl',
     '==': 'sete',
@@ -57,9 +60,11 @@ def gen_stack_mapping(code, params):
             continue
         for argpos in op_uses_values[op] + ([3]if op in op_sets_result else[]):
             arg = tac[argpos]
-            if not is_var_or_temp(arg):
-                continue
             if arg in currmap:
+                continue
+            if not is_var_or_temp(arg):
+                if type(arg) is float:
+                    currmap[arg] = -(len(currmap) + 1) * 4
                 continue
             if arg in params:
                 continue
@@ -69,18 +74,60 @@ def gen_stack_mapping(code, params):
     return currmap
 
 
+def calc_types(code):
+    types = []
+    tmptypes = {}
+
+    def typeofarg(arg):
+        if type(arg) is str:
+            return tmptypes[arg]
+        return 'int' if type(arg) is int else 'float'
+    for line, (op, arg1, arg2, res) in enumerate(code):
+        newtype = None
+        if op == 'assign':
+            if arg2 is None:
+                newtype = typeofarg(arg1)
+            else:
+                newtype = arg2
+            tmptypes[res] = newtype
+        elif op == 'pop':
+            newtype = arg2
+            tmptypes[res] = newtype
+        elif op == 'arr-def':
+            newtype = res
+            tmptypes[arg2] = newtype
+        elif op == 'arr-acc':
+            newtype = typeofarg(arg2)
+            tmptypes[res] = newtype
+        elif op in bin_ops:
+            arg1t, arg2t = typeofarg(arg1), typeofarg(arg2)
+            if arg1t != arg2t:
+                # TODO type coercion?
+                raise Exception
+            newtype = arg1t
+            tmptypes[res] = newtype
+        types.append(newtype)
+    return types
+
+
+def float_to_asm(f):
+    return '$%s' % hex(struct.unpack('<I', struct.pack('<f', f))[0])
+
+
 def fun_to_asm(code, assembly):
 
     def arg_to_asm(arg):
-        if is_var_or_temp(arg):
+        if is_var_or_temp(arg) or type(arg) is float:
             return '%d(%%ebp)' % register_to_stack[arg]
-        else:
+        elif type(arg) is int:
             return '$%d' % arg
+        else:
+            raise NotImplementedError
 
     def add(op, arg1=None, arg2=None, comment=None, indent=True):
         assembly.append(ASMInstruction(op, arg1, arg2, comment, indent))
 
-    def to_assembly(op, arg1, arg2, res):
+    def to_assembly(op, arg1, arg2, res, totype=None):
         if op == 'jump':
             add('jmp', res)
         elif op == 'jumpfalse':
@@ -104,7 +151,7 @@ def fun_to_asm(code, assembly):
             raise NotImplementedError
         elif op == 'assign':
             comment = res + ' := ' + str(arg1)
-            need_accum = is_var_or_temp(arg1) and is_var_or_temp(res)
+            need_accum = (is_var_or_temp(arg1) and is_var_or_temp(res)) or type(arg1) is float
             arg1, res = [arg_to_asm(el) for el in [arg1, res]]
             if need_accum:
                 add('mov', arg1, '%eax', comment=comment)
@@ -113,18 +160,27 @@ def fun_to_asm(code, assembly):
                 add('movl', arg1, res, comment=comment)
         elif op in ['*', '/', '%']:
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
-            add('mov', arg_to_asm(arg1), '%eax', comment=comment)
-            if op in ['/', '%']:
-                add('cdq')
-            if is_var_or_temp(arg2):
-                add(op_to_asm[op], arg_to_asm(arg2))
+            if totype == 'int':
+                add('mov', arg_to_asm(arg1), '%eax', comment=comment)
+                if op in ['/', '%']:
+                    add('cdq')
+                if is_var_or_temp(arg2):
+                    add(op_to_asm[op], arg_to_asm(arg2))
+                else:
+                    add('mov', arg_to_asm(arg2), '%ecx')
+                    add(op_to_asm[op], '%ecx')
+                if op == '%':
+                    add('mov', '%edx', arg_to_asm(res))
+                else:
+                    add('mov', '%eax', arg_to_asm(res))
+            elif totype == 'float':
+                op = 'f' + op
+                add('flds', arg_to_asm(arg1), comment=comment)
+                add('flds', arg_to_asm(arg2))
+                add(op_to_asm[op], '%st', '%st(1)')
+                add('fstps', arg_to_asm(res))
             else:
-                add('mov', arg_to_asm(arg2), '%ecx')
-                add(op_to_asm[op], '%ecx')
-            if op == '%':
-                add('mov', '%edx', arg_to_asm(res))
-            else:
-                add('mov', '%eax', arg_to_asm(res))
+                raise NotImplementedError
         elif op in bin_ops:
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             if op in op_is_comp:
@@ -134,9 +190,18 @@ def fun_to_asm(code, assembly):
                 add('cmp', '%eax', '%ebx')
                 add(op_to_asm[op], arg_to_asm(res))
             else:
-                add('mov', arg_to_asm(arg1), '%eax', comment=comment)
-                add(op_to_asm[op], arg_to_asm(arg2), '%eax')
-                add('mov', '%eax', arg_to_asm(res))
+                if totype == 'int':
+                    add('mov', arg_to_asm(arg1), '%eax', comment=comment)
+                    add(op_to_asm[op], arg_to_asm(arg2), '%eax')
+                    add('mov', '%eax', arg_to_asm(res))
+                elif totype == 'float':
+                    op = 'f' + op
+                    add('flds', arg_to_asm(arg1), comment=comment)
+                    add('flds', arg_to_asm(arg2))
+                    add(op_to_asm[op], '%st', '%st(1)')
+                    add('fstps', arg_to_asm(res))
+                else:
+                    raise NotImplementedError
         elif op == 'u-':
             comment = res + ' = ' + op[1:] + str(arg1)
             add('mov', '$0', '%eax', comment=comment)
@@ -155,6 +220,7 @@ def fun_to_asm(code, assembly):
             add('leal', '(,%ebx, 4)', '%ebx')
             add('sub', '%ebx', '%esp')
             add('movl', '%esp', arg_to_asm(name))
+        # TODO use esi register?, remove %
         elif op == 'arr-acc':
             name, index = arg2, arg1
             comment = res + ' = ' + str(name) + '[' + str(index) + ']'
@@ -220,7 +286,9 @@ def fun_to_asm(code, assembly):
     state, fname, params = 'fun-def', None, []
     line = 0
     args = []
+    types = calc_types(code)
     while line < len(code):
+        totype = types[line]
         tac = code[line]
         op, arg1, _, res = tac
 
@@ -243,7 +311,10 @@ def fun_to_asm(code, assembly):
                     comment='make space on stack for %d local registers' % registersinframe)
                 for var in register_to_stack:
                     if var not in params:
-                        add(None, comment=var.rjust(5) + ' := ' + arg_to_asm(var))
+                        add(None, comment=str(var).rjust(5) + ' := ' + arg_to_asm(var))
+                for val, var in register_to_stack.items():
+                    if type(val) is float:
+                        add('movl', float_to_asm(val), '%d(%%ebp)' % var, comment=('const float: ' + str(val)))
                 add(None)
                 state = 'fun-body'
                 continue
@@ -268,7 +339,7 @@ def fun_to_asm(code, assembly):
             elif op == 'pop':
                 add('mov', '%eax', arg_to_asm(res))
             else:
-                to_assembly(*tac)
+                to_assembly(*tac, totype=totype)
 
         line += 1
 

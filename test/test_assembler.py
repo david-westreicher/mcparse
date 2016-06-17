@@ -164,6 +164,13 @@ class TestAssembler(unittest.TestCase):
 
 class IntegrationTest(unittest.TestCase):
 
+    def isint(self, s):
+        try:
+            int(s)
+            return True
+        except ValueError:
+            return False
+
     def compile(self, codestr):
         asmfile = NamedTemporaryFile(suffix='.s', delete=False)
         code = codetoasm(codestr, asmfile.name)
@@ -174,7 +181,7 @@ class IntegrationTest(unittest.TestCase):
 
     def execute_code(self, asmfile, inp=0):
         p = Popen([asmfile + '.bin'], stdin=PIPE, stdout=PIPE)
-        inp = b'%d\n' % inp
+        inp = b'%f\n' % inp
         p.stdin.write(inp)
         p.stdin.flush()
         result = []
@@ -182,7 +189,7 @@ class IntegrationTest(unittest.TestCase):
             num = num.decode('utf-8')
             if ':' in num:
                 _, num = num.split(':')
-            result.append(int(num))
+            result.append(int(num) if self.isint(num) else float(num))
         p.stdin.close()
         p.stdout.close()
         p.wait()
@@ -191,6 +198,59 @@ class IntegrationTest(unittest.TestCase):
     def clean(self, asmfile):
         os.remove(asmfile)
         os.remove(asmfile + '.bin')
+
+    def test_float_simple(self):
+        nums = (30.211, 0.9, 0.100, 23345.291231, 0.00023)
+        code = '''{
+            void main(){
+                read_int();
+                print_float(%s);
+                print_float(%s);
+                print_float(%s);
+                print_float(%s);
+                print_float(%s);
+            }
+        }''' % nums
+        asmfile = self.compile(code)
+        result = self.execute_code(asmfile, 0)
+        for val1, val2 in zip(result, list(nums)):
+            self.assertTrue(abs(val1 - val2) < 0.001)
+        self.clean(asmfile)
+
+    def test_float_loop(self):
+        code = '''{
+            void main(){
+                read_int();
+                float x = 0.0;
+                for(int i = 0;i<100;i=i+1){
+                    print_float(x);
+                    x = x+0.1;
+                }
+            }
+        }'''
+        asmfile = self.compile(code)
+        result = self.execute_code(asmfile, 0)
+        for val1, val2 in zip(result, [float(i) * 0.1 for i in range(100)]):
+            self.assertTrue(abs(val1 - val2) < 0.001)
+        self.clean(asmfile)
+
+    def test_float_mult(self):
+        for x in [0.4, 0.123, 123.349]:
+            for y in [45.432, 25.943, 90.1]:
+                code = '''{
+                    void main(){
+                        read_int();
+                        float x = %s;
+                        float y = %s;
+                        float z = x*y;
+                        print_float(z);
+                    }
+                }''' % (x, y)
+                asmfile = self.compile(code)
+                result = self.execute_code(asmfile, 0)
+                for val1, val2 in zip(result, [x * y]):
+                    self.assertTrue(abs(val1 - val2) < 0.001)
+                self.clean(asmfile)
 
     def test_fib(self):
         def fib(num):

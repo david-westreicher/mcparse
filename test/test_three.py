@@ -18,7 +18,7 @@ class TestThree(unittest.TestCase):
         op, arg1, arg2, res = three[0]
         self.assertEqual(op, 'assign')
         self.assertEqual(arg1, 0)
-        self.assertEqual(arg2, None)
+        self.assertEqual(arg2, 'int')
         self.assertEqual(res, 'x')
 
 
