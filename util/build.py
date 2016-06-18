@@ -9,11 +9,14 @@ if __name__ == '__main__':
     parser.add_argument('--lvn', '-l', action='count', default=False)
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--execute', '-e', action='count', default=0)
+    parser.add_argument('--debug', '-d', action='count', default=False)
     args = parser.parse_args()
     lvn = ['--lvn'] if args.lvn else []
     verbose = ['-' + ('v' * args.verbose)] if args.verbose else []
     pycall = ['python', '-m', 'src.assembler', args.filename] + lvn + verbose
-    gcc = ['gcc', '-gdwarf-3', '-o', args.filename + '.bin', args.filename + '.s', 'assembler/lib.c', '-m32']
+    gcc = ['gcc', '-o', args.filename + '.bin', args.filename + '.s', 'assembler/lib.c', '-m32']
+    if args.debug:
+        gcc.insert(1, '-gdwarf-3')
     run = [args.filename + '.bin']
     cmds = [pycall, gcc] + ([run] if args.execute else [])
     for cmd in cmds:
