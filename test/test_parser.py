@@ -70,6 +70,8 @@ class TestGrammar(unittest.TestCase):
         self.checkstmt('-4.2', 'paren_expr', False)
         self.checkstmt('( 1+7 )', 'paren_expr', True)
 
+        self.checkstmt('foo()+1', 'expression', True)
+
     def test_statements(self):
         self.checkstmt('test', 'expr_stmt', False)
         self.checkstmt('1;', 'expr_stmt', True)

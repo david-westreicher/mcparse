@@ -22,11 +22,11 @@ mcgrammar = Grammar(
     expr_stmt        = expression _ ";"
     type             = "int" / "float"
     type_or_void     = type / "void"
-    expression       = call_expr / binary_operation / single_expr
+    expression       = binary_operation / single_expr
     call_expr        = identifier _ "(" _ arguments? _ ")"
     arguments        = expression ( _ "," _ expression )*
     binary_operation = single_expr _ bin_op _ expression
-    single_expr      = paren_expr / unary_expr / array_exp / literal / variable
+    single_expr      = call_expr / paren_expr / unary_expr / array_exp / literal / variable
     bin_op           = "+" / "-" / "*" / "/" / "%" / "==" / "!=" / "<=" / ">=" / "<" / ">" / "="
     paren_expr       = "(" _ expression _ ")"
     unary_expr       = unop _ expression
