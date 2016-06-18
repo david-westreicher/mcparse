@@ -173,4 +173,6 @@ lib_sigs = [
     ('read_float', 'float', []),
     ('print_int', 'void', [('int', 'x')]),
     ('print_float', 'void', [('float', 'x')]),
+    ('start_measurement', 'void', []),
+    ('end_measurement', 'void', []),
 ]

@@ -3,4 +3,6 @@
 *.pdf
 examples/*.s
 examples/*.bin
+bench/*.s
+bench/*.bin
 htmlcov/

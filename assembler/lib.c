@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <inttypes.h>
 
 int read_int();
 float read_float();
@@ -24,5 +25,22 @@ void print_int(int out) {
 }
 
 void print_float(float out) {
-	printf("%8.4f\n", out);
+	printf("%f\n", out);
+}
+
+uint64_t measure() {
+	volatile uint32_t a, d;
+	__asm__ __volatile__("rdtsc" : "=a"(a), "=d"(d));
+	return ((uint64_t)a | ((uint64_t)d << 32));
+}
+
+uint64_t g_ts;
+void start_measurement() {
+	g_ts = measure();
+}
+
+void end_measurement() {
+	uint64_t t = measure() - g_ts;
+	printf("       --|--|--|--\n", t);
+	printf("Time: %12lu ticks\n", t);
 }
