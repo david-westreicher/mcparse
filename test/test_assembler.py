@@ -217,7 +217,7 @@ class IntegrationTest(unittest.TestCase):
             self.assertTrue(abs(val1 - val2) < 0.001)
         self.clean(asmfile)
 
-    def test_float_loop(self):
+    def test_float_loop_add(self):
         code = '''{
             void main(){
                 read_int();
@@ -231,6 +231,20 @@ class IntegrationTest(unittest.TestCase):
         asmfile = self.compile(code)
         result = self.execute_code(asmfile, 0)
         for val1, val2 in zip(result, [float(i) * 0.1 for i in range(100)]):
+            self.assertTrue(abs(val1 - val2) < 0.001)
+        self.clean(asmfile)
+
+    def test_float_loop_i(self):
+        code = '''{
+            void main(){
+	        for(float i = 0.0; i < 200.0; i=i+1.0) {
+	            print_float(i);
+	        }
+            }
+        }'''
+        asmfile = self.compile(code)
+        result = self.execute_code(asmfile, 0)
+        for val1, val2 in zip(result, [float(i) for i in range(15)]):
             self.assertTrue(abs(val1 - val2) < 0.001)
         self.clean(asmfile)
 
@@ -250,6 +264,100 @@ class IntegrationTest(unittest.TestCase):
                 result = self.execute_code(asmfile, 0)
                 for val1, val2 in zip(result, [x * y]):
                     self.assertTrue(abs(val1 - val2) < 0.001)
+                self.clean(asmfile)
+
+    def test_float_sub(self):
+        for x in [0.4, 0.123, 123.349]:
+            for y in [45.432, 25.943, 90.1]:
+                code = '''{
+                    void main(){
+                        read_int();
+                        float x = %s;
+                        float y = %s;
+                        float z = x-y;
+                        print_float(z);
+                    }
+                }''' % (x, y)
+                asmfile = self.compile(code)
+                result = self.execute_code(asmfile, 0)
+                for val1, val2 in zip(result, [x - y]):
+                    self.assertTrue(abs(val1 - val2) < 0.001)
+                self.clean(asmfile)
+
+    def test_float_div(self):
+        for x in [0.4, 0.123, 123.349]:
+            for y in [45.432, 25.943, 90.1]:
+                code = '''{
+                    void main(){
+                        read_int();
+                        float x = %s;
+                        float y = %s;
+                        float z = x/y;
+                        print_float(z);
+                    }
+                }''' % (x, y)
+                asmfile = self.compile(code)
+                result = self.execute_code(asmfile, 0)
+                for val1, val2 in zip(result, [x / y]):
+                    self.assertTrue(abs(val1 - val2) < 0.001)
+                self.clean(asmfile)
+
+    def test_float_sub_unary(self):
+        for x in [0.4, 0.123, 123.349, 45.432, 25.943, 90.1]:
+            code = '''{
+                void main(){
+                    read_int();
+                    float x = %s;
+                    float y = -x;
+                    print_float(y);
+                }
+            }''' % (x)
+            asmfile = self.compile(code)
+            result = self.execute_code(asmfile, 0)
+            for val1, val2 in zip(result, [-x]):
+                self.assertTrue(abs(val1 - val2) < 0.001)
+            self.clean(asmfile)
+
+    def test_float_cmp_smaller(self):
+        for x in [0.4, 0.123, 123.349]:
+            for y in [45.432, 25.943, 90.1]:
+                code = '''{
+                    void main(){
+                        read_int();
+                        float x = %s;
+                        float y = %s;
+                        if(x<y){
+                            print_int(0);
+                        }else{
+                            print_int(1);
+                        }
+                    }
+                }''' % (x, y)
+                asmfile = self.compile(code)
+                result = self.execute_code(asmfile, 0)
+                for val1, val2 in zip(result, [x / y]):
+                    self.assertTrue(val1 == (0 if x < y else 1))
+                self.clean(asmfile)
+
+    def test_float_cmp_ge(self):
+        for x in [0.4, 0.123, 123.349, 45.432, 25.943, 90.1]:
+            for y in [45.432, 25.943, 90.1]:
+                code = '''{
+                    void main(){
+                        read_int();
+                        float x = %s;
+                        float y = %s;
+                        if(x>=y){
+                            print_int(0);
+                        }else{
+                            print_int(1);
+                        }
+                    }
+                }''' % (x, y)
+                asmfile = self.compile(code)
+                result = self.execute_code(asmfile, 0)
+                for val1, val2 in zip(result, [x / y]):
+                    self.assertTrue(val1 == (0 if x >= y else 1))
                 self.clean(asmfile)
 
     def test_fib(self):

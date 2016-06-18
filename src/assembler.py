@@ -1,5 +1,5 @@
 import struct
-from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op, op_is_comp, bin_ops
+from .utils import function_ranges2, op_uses_values, op_sets_result, simplify_op, op_is_comp, bin_ops, un_ops
 
 
 class ASMInstruction:
@@ -31,15 +31,20 @@ op_to_asm = {
     '+': 'add',
     'f+': 'faddp',
     '-': 'sub',
+    'f-': 'fsubp',
+    'fu-': 'fsubp',
     '*': 'imull',
     'f*': 'fmulp',
     '/': 'idivl',
+    'f/': 'fdivp',
     '%': 'idivl',
     '==': 'sete',
     '!=': 'setne',
     '<=': 'setle',
     '>=': 'setge',
+    'f>=': 'setnb',
     '<': 'setl',
+    'f<': 'setnae',
     '>': 'setg',
 }
 
@@ -99,9 +104,13 @@ def calc_types(code):
         elif op == 'arr-acc':
             newtype = typeofarg(arg2)
             tmptypes[res] = newtype
+        elif op in un_ops:
+            newtype = typeofarg(arg1)
+            tmptypes[res] = newtype
         elif op in bin_ops:
             arg1t, arg2t = typeofarg(arg1), typeofarg(arg2)
             if arg1t != arg2t:
+                print(arg1t, arg2t, arg1, arg2)
                 # TODO type coercion?
                 raise Exception
             newtype = arg1t
@@ -175,8 +184,8 @@ def fun_to_asm(code, assembly):
                     add('mov', '%eax', arg_to_asm(res))
             elif totype == 'float':
                 op = 'f' + op
-                add('flds', arg_to_asm(arg1), comment=comment)
-                add('flds', arg_to_asm(arg2))
+                add('flds', arg_to_asm(arg2), comment=comment)
+                add('flds', arg_to_asm(arg1))
                 add(op_to_asm[op], '%st', '%st(1)')
                 add('fstps', arg_to_asm(res))
             else:
@@ -184,10 +193,19 @@ def fun_to_asm(code, assembly):
         elif op in bin_ops:
             comment = res + ' = ' + str(arg1) + ' ' + op + ' ' + str(arg2)
             if op in op_is_comp:
-                add('mov', arg_to_asm(arg1), '%ebx', comment=comment)
-                add('mov', arg_to_asm(arg2), '%eax')
+                if totype == 'int':
+                    add('mov', arg_to_asm(arg1), '%ebx', comment=comment)
+                    add('mov', arg_to_asm(arg2), '%eax')
+                    add('cmp', '%eax', '%ebx')
+                elif totype == 'float':
+                    op = 'f' + op
+                    add('flds', arg_to_asm(arg2), comment=comment)
+                    add('flds', arg_to_asm(arg1))
+                    add('fcomip')
+                    add('fstp', '%st(0)')
+                else:
+                    raise NotImplementedError
                 add('movl', '$0', arg_to_asm(res))
-                add('cmp', '%eax', '%ebx')
                 add(op_to_asm[op], arg_to_asm(res))
             else:
                 if totype == 'int':
@@ -196,17 +214,26 @@ def fun_to_asm(code, assembly):
                     add('mov', '%eax', arg_to_asm(res))
                 elif totype == 'float':
                     op = 'f' + op
-                    add('flds', arg_to_asm(arg1), comment=comment)
-                    add('flds', arg_to_asm(arg2))
+                    add('flds', arg_to_asm(arg2), comment=comment)
+                    add('flds', arg_to_asm(arg1))
                     add(op_to_asm[op], '%st', '%st(1)')
                     add('fstps', arg_to_asm(res))
                 else:
                     raise NotImplementedError
         elif op == 'u-':
             comment = res + ' = ' + op[1:] + str(arg1)
-            add('mov', '$0', '%eax', comment=comment)
-            add('sub', arg_to_asm(arg1), '%eax')
-            add('mov', '%eax', arg_to_asm(res))
+            if totype == 'int':
+                add('mov', '$0', '%eax', comment=comment)
+                add('sub', arg_to_asm(arg1), '%eax')
+                add('mov', '%eax', arg_to_asm(res))
+            elif totype == 'float':
+                op = 'f' + op
+                add('flds', arg_to_asm(arg1), comment=comment)
+                add('fldz')
+                add(op_to_asm[op], '%st', '%st(1)')
+                add('fstps', arg_to_asm(res))
+            else:
+                raise NotImplementedError
         elif op == 'u!':
             comment = res + ' = ' + op[1:] + str(arg1)
             add('mov', arg_to_asm(arg1), '%eax', comment=comment)

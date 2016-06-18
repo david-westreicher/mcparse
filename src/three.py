@@ -80,6 +80,10 @@ class Scope(object):
         self.function_stack.pop()
         self.close()
 
+    def get_fun_rettype(self, name):
+        funcswithname = next(iter(filter(lambda funname: name == funname[0], self.function_sigs)), None)
+        return funcswithname.returntype
+
     def check_function_return(self, expression):
         returntype = self.function_stack[-1].returntype
         if returntype == 'void':
@@ -297,7 +301,8 @@ def asttothree(ast, three=None, scope=None, result=None, verbose=0):
             three.append(['push', tmpvar, None, None])
         three.append(['call', None, None, ast.name])
         if result is not None:
-            three.append(['pop', None, None, result])
+            rettype = scope.get_fun_rettype(ast.name)
+            three.append(['pop', None, rettype, result])
 
     if type(ast) == BinOp:
         if ast.operation == '=' and type(ast.lhs) in [Variable, ArrayExp]:
