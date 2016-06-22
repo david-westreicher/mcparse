@@ -38,10 +38,27 @@ def localvaluenumbering(basicblock):
                 code[2] = None
                 code[3] = res
         if simple_op in ['assign']:
-            newval = valargs[0]
+            assval = valargs[0]
+            if isrealvar(res) and not isrealvar(assval):
+                for args, var in values.items():
+                    if var == assval and args != assval:
+                        if type(args) is tuple:
+                            print(res, args, var)
+                            code[0] = args[0]
+                            code[1] = args[1]
+                            if len(args)==3:
+                                code[2] = args[2]
+                            code[3] = res
+                            values[args] = res
+                            values[valargs[0]] = res
+                            break
+            else:
+                newval = valargs[0]
         if newval is not None:
             values[res] = newval
 
+def isrealvar(arg):
+    return type(arg) is str and not arg.startswith('.t')
 
 def removeunusedlines_block(bb):
     usedtemps = set()

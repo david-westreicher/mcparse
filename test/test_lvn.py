@@ -144,7 +144,7 @@ class TestLVN(unittest.TestCase):
             int c= 2==1;
         }'''
         ntmpvars = self.codetest(code)
-        self.assertEqual(len(ntmpvars), 3)
+        self.assertEqual(len(ntmpvars), 0)
 
 if __name__ == '__main__':
     unittest.main()
